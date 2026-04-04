@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>P0 Unit Tests -- Inbox Sort and Tidy</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 720px; margin: 2rem auto; padding: 0 1rem; }
+    h1 { font-size: 1.25rem; }
+    .pass { color: #047857; } .fail { color: #991b1b; font-weight: 700; }
+    .result { padding: 0.25rem 0; font-size: 0.85rem; font-family: monospace; }
+    .summary { margin-top: 1rem; padding: 1rem; border-radius: 8px; font-weight: 600; }
+    .summary.all-pass { background: #ecfdf5; color: #047857; }
+    .summary.has-fail { background: #fef2f2; color: #991b1b; }
+  </style>
+</head>
+<body>
+  <h1>P0 Unit Tests</h1>
+  <div id="output"></div>
+  <div id="summary"></div>
+  <script type="module">
+    import { classifyMessages } from '../js/classifier.js';
+    import { sanitise, requireAuth } from '../js/security.js';
+    import { loadPreferences, savePreferences, clearPreferences, applyPreferences } from '../js/preferences.js';
+
+    const output = document.getElementById('output');
+    const summaryEl = document.getElementById('summary');
+    let passed = 0, failed = 0;
+
+    function assert(id, desc, condition) {
+      const el = document.createElement('div');
+      el.className = 'result';
+      if (condition) {
+        el.innerHTML = `<span class="pass">PASS</span> ${id}: ${desc}`;
+        passed++;
+      } else {
+        el.innerHTML = `<span class="fail">FAIL</span> ${id}: ${desc}`;
+        failed++;
+      }
+      output.appendChild(el);
+    }
+
+    function msg(overrides) {
+      return { id: '1', sender: '', senderEmail: '', senderDomain: '', subject: '', hasUnsubscribe: false, date: 0, ...overrides };
+    }
+
+    // ── CLASSIFIER TESTS ───────────────────────────────────────
+
+    // UT-CL-001: Noreply classified as notifications
+    let groups = classifyMessages([msg({ senderEmail: 'noreply@example.com', senderDomain: 'example.com' })]);
+    assert('UT-CL-001', 'Noreply -> notifications', groups[0].suggestedCategory === 'notifications');
+
+    // UT-CL-002: All noreply patterns
+    const noreplyPatterns = ['noreply@x.com','no-reply@x.com','do-not-reply@x.com','donotreply@x.com','notifications@x.com','mailer-daemon@x.com','postmaster@x.com','auto-confirm@x.com','bounce@x.com','automated@x.com'];
+    noreplyPatterns.forEach((email, i) => {
+      groups = classifyMessages([msg({ senderEmail: email, senderDomain: 'x.com' })]);
+      assert(`UT-CL-002.${i}`, `${email} -> notifications`, groups[0].suggestedCategory === 'notifications');
+    });
+
+    // UT-CL-003: Social domain
+    groups = classifyMessages([msg({ senderEmail: 'updates@facebookmail.com', senderDomain: 'facebookmail.com' })]);
+    assert('UT-CL-003', 'Social domain -> social', groups[0].suggestedCategory === 'social');
+
+    // UT-CL-004: All social domains
+    const socialDomains = ['facebookmail.com','linkedin.com','twitter.com','x.com','instagram.com','tiktok.com','reddit.com','quora.com','medium.com','substack.com','discord.com','slack.com','meetup.com','nextdoor.com','pinterest.com'];
+    socialDomains.forEach((domain, i) => {
+      groups = classifyMessages([msg({ senderEmail: `info@${domain}`, senderDomain: domain })]);
+      assert(`UT-CL-004.${i}`, `${domain} -> social`, groups[0].suggestedCategory === 'social');
+    });
+
+    // UT-CL-005: Newsletter via List-Unsubscribe
+    groups = classifyMessages([msg({ senderEmail: 'news@company.com', senderDomain: 'company.com', hasUnsubscribe: true })]);
+    assert('UT-CL-005', 'List-Unsubscribe -> newsletters', groups[0].suggestedCategory === 'newsletters');
+
+    // UT-CL-006: Receipt via sender domain
+    groups = classifyMessages([msg({ senderEmail: 'orders@stripe.com', senderDomain: 'stripe.com' })]);
+    assert('UT-CL-006', 'Receipt sender domain -> receipts', groups[0].suggestedCategory === 'receipts');
+
+    // UT-CL-007: All receipt domains
+    ['stripe.com','paypal.com','square.com','xero.com','shopify.com','amazon.com','apple.com'].forEach((domain, i) => {
+      groups = classifyMessages([msg({ senderEmail: `info@${domain}`, senderDomain: domain })]);
+      assert(`UT-CL-007.${i}`, `${domain} -> receipts`, groups[0].suggestedCategory === 'receipts');
+    });
+
+    // UT-CL-008: Receipt via subject keyword
+    groups = classifyMessages([msg({ senderEmail: 'billing@co.com', senderDomain: 'co.com', subject: 'Your order confirmation' })]);
+    assert('UT-CL-008', 'Receipt subject keyword -> receipts', groups[0].suggestedCategory === 'receipts');
+
+    // UT-CL-010: Human (default)
+    groups = classifyMessages([msg({ senderEmail: 'john@company.com', senderDomain: 'company.com', subject: 'Hey, lunch?' })]);
+    assert('UT-CL-010', 'Normal email -> human', groups[0].suggestedCategory === 'human');
+
+    // UT-CL-011: Priority: noreply beats newsletter
+    groups = classifyMessages([msg({ senderEmail: 'noreply@newsletter.com', senderDomain: 'newsletter.com', hasUnsubscribe: true })]);
+    assert('UT-CL-011', 'Noreply + List-Unsubscribe -> notifications (not newsletters)', groups[0].suggestedCategory === 'notifications');
+
+    // UT-CL-012: Priority: social beats newsletter
+    groups = classifyMessages([msg({ senderEmail: 'info@linkedin.com', senderDomain: 'linkedin.com', hasUnsubscribe: true })]);
+    assert('UT-CL-012', 'Social domain + List-Unsubscribe -> social (not newsletters)', groups[0].suggestedCategory === 'social');
+
+    // UT-CL-014: Grouping by sender email
+    groups = classifyMessages([
+      msg({ id: '1', senderEmail: 'alice@co.com', senderDomain: 'co.com' }),
+      msg({ id: '2', senderEmail: 'alice@co.com', senderDomain: 'co.com' }),
+      msg({ id: '3', senderEmail: 'alice@co.com', senderDomain: 'co.com' }),
+      msg({ id: '4', senderEmail: 'bob@co.com', senderDomain: 'co.com' }),
+      msg({ id: '5', senderEmail: 'bob@co.com', senderDomain: 'co.com' }),
+    ]);
+    assert('UT-CL-014', 'Groups by sender: 2 groups', groups.length === 2);
+    assert('UT-CL-014b', 'Alice has 3 messages', groups.find(g => g.senderEmail === 'alice@co.com').messages.length === 3);
+
+    // UT-CL-015: Case-insensitive grouping
+    groups = classifyMessages([
+      msg({ senderEmail: 'Alice@Co.COM', senderDomain: 'co.com' }),
+      msg({ senderEmail: 'alice@co.com', senderDomain: 'co.com' }),
+    ]);
+    assert('UT-CL-015', 'Case-insensitive grouping', groups.length === 1 && groups[0].messages.length === 2);
+
+    // UT-CL-016: Sorted by count descending
+    groups = classifyMessages([
+      msg({ senderEmail: 'a@x.com', senderDomain: 'x.com' }),
+      msg({ senderEmail: 'a@x.com', senderDomain: 'x.com' }),
+      msg({ senderEmail: 'b@x.com', senderDomain: 'x.com' }),
+      msg({ senderEmail: 'b@x.com', senderDomain: 'x.com' }),
+      msg({ senderEmail: 'b@x.com', senderDomain: 'x.com' }),
+    ]);
+    assert('UT-CL-016', 'Sorted descending by count', groups[0].messages.length >= groups[1].messages.length);
+
+    // UT-CL-017: Empty array
+    groups = classifyMessages([]);
+    assert('UT-CL-017', 'Empty input -> empty output', groups.length === 0);
+
+    // ── SECURITY TESTS ─────────────────────────────────────────
+
+    assert('UT-SE-001', 'Sanitise script tag', sanitise('<script>alert(1)</script>') === '&lt;script&gt;alert(1)&lt;/script&gt;');
+    assert('UT-SE-002', 'Sanitise img onerror', sanitise('<img onerror="alert(1)">').includes('&lt;') && sanitise('<img onerror="alert(1)">').includes('&quot;'));
+    assert('UT-SE-003', 'Sanitise ampersand', sanitise('Tom & Jerry') === 'Tom &amp; Jerry');
+    assert('UT-SE-004', 'Sanitise quotes', sanitise('"it\'s"') === '&quot;it&#39;s&quot;');
+    assert('UT-SE-005', 'Sanitise normal text', sanitise('Hello World') === 'Hello World');
+    assert('UT-SE-006', 'Sanitise empty string', sanitise('') === '');
+    assert('UT-SE-007', 'Sanitise null', sanitise(null) === '');
+    assert('UT-SE-008', 'Sanitise number', sanitise(42) === '');
+    assert('UT-SE-009', 'Sanitise undefined', sanitise(undefined) === '');
+
+    // requireAuth
+    assert('UT-SE-012', 'requireAuth passes when authed', requireAuth(() => true, (a, b) => a + b)(1, 2) === 3);
+    let threw = false;
+    try { requireAuth(() => false, () => {})(); } catch { threw = true; }
+    assert('UT-SE-013', 'requireAuth throws when not authed', threw);
+
+    // ── PREFERENCES TESTS ──────────────────────────────────────
+
+    clearPreferences();
+    assert('UT-PR-002', 'Load empty prefs', Object.keys(loadPreferences()).length === 0);
+
+    savePreferences({ 'a@b.com': 'archive' });
+    assert('UT-PR-001', 'Save and load round-trip', loadPreferences()['a@b.com'] === 'archive');
+
+    clearPreferences();
+    assert('UT-PR-004', 'Clear prefs', Object.keys(loadPreferences()).length === 0);
+
+    // Corrupted data
+    localStorage.setItem('inbox-sort-tidy-prefs', 'not valid json{{{');
+    assert('UT-PR-003', 'Corrupted data -> empty object', Object.keys(loadPreferences()).length === 0);
+    clearPreferences();
+
+    // applyPreferences
+    const testGroups = [{ senderEmail: 'a@b.com', suggestedCategory: 'human', assignedCategory: null, messages: [] }];
+    applyPreferences(testGroups, { 'a@b.com': 'archive' });
+    assert('UT-PR-005', 'applyPreferences overrides', testGroups[0].assignedCategory === 'archive');
+
+    // ── NO-INNERHTML CHECK ─────────────────────────────────────
+
+    // Check ui.js source for innerHTML
+    const uiResponse = await fetch('../js/ui.js');
+    const uiSource = await uiResponse.text();
+    assert('SEC-007', 'No innerHTML in ui.js', !uiSource.includes('innerHTML'));
+
+    // Check all JS files
+    const jsFiles = ['app.js','auth.js','gmail.js','scanner.js','classifier.js','ui.js','actions.js','preferences.js','security.js'];
+    let innerHtmlFound = false;
+    for (const file of jsFiles) {
+      const res = await fetch(`../js/${file}`);
+      const src = await res.text();
+      if (src.includes('innerHTML')) { innerHtmlFound = true; break; }
+    }
+    assert('SEC-007b', 'No innerHTML in any JS file', !innerHtmlFound);
+
+    // ── SUMMARY ────────────────────────────────────────────────
+
+    summaryEl.className = `summary ${failed === 0 ? 'all-pass' : 'has-fail'}`;
+    summaryEl.textContent = `${passed} passed, ${failed} failed out of ${passed + failed} tests`;
+  </script>
+</body>
+</html>
