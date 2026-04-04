@@ -33,8 +33,8 @@
       </div>
 
       <div class="trust" aria-label="Privacy commitments">
-        <p class="trust-line">Your data never leaves this device. Nothing is saved, ever.</p>
-        <p class="trust-detail">Only sender names and subject lines are scanned. Email content is never read.</p>
+        <p class="trust-line">Your emails stay exactly where they are. This app keeps no copy of anything.</p>
+        <p class="trust-detail">Only sender names and subject lines are scanned. Email content is never read. Every action can be undone.</p>
       </div>
 
       <div id="connect-error" class="error-alert" hidden role="alert"></div>
@@ -74,7 +74,7 @@
     <section id="view-preview" hidden aria-label="Preview changes before applying" tabindex="-1">
       <div class="view-card">
         <h2>Ready to tidy</h2>
-        <p>Here is exactly what will change. Nothing is deleted — archived emails stay in All Mail.</p>
+        <p>Here is exactly what will change. Emails are moved, never deleted. You can undo everything afterwards.</p>
         <div id="preview-summary"></div>
         <div class="button-group">
           <button id="btn-execute" type="button" class="btn-primary btn-go">Tidy My Inbox</button>
@@ -105,6 +105,10 @@
         <div class="button-group" style="justify-content: center;">
           <button id="btn-scan-again" type="button" class="btn-primary">Scan Again</button>
           <button id="btn-done-disconnect" type="button" class="btn-secondary">Disconnect</button>
+        </div>
+        <div class="undo-section">
+          <button id="btn-undo" type="button" class="btn-undo" aria-label="Undo all changes and put emails back in your inbox">Undo everything</button>
+          <p class="undo-hint">Changed your mind? This will put every email back in your inbox, exactly as it was.</p>
         </div>
       </div>
     </section>

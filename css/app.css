@@ -555,6 +555,51 @@ button.btn-ghost:focus-visible {
   margin-bottom: 0;
 }
 
+/* ── Undo section ─────────────────────────────────────────────── */
+.undo-section {
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border);
+  text-align: center;
+}
+
+button.btn-undo {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1.25rem;
+  background: transparent;
+  color: var(--text-tertiary);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+button.btn-undo:hover {
+  color: var(--text-secondary);
+  border-color: var(--text-tertiary);
+  border-style: solid;
+}
+
+button.btn-undo:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+button.btn-undo:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.undo-hint {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+  margin-top: 0.5rem;
+}
+
 .results-stats {
   text-align: left;
   max-width: 20rem;

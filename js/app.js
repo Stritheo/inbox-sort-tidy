@@ -8,7 +8,7 @@ import { scanInbox } from './scanner.js';
 import { classifyMessages } from './classifier.js';
 import { renderSenderTable, renderProgress, renderPreview, renderResults } from './ui.js';
 import { loadPreferences, applyPreferences, saveCurrentChoices } from './preferences.js';
-import { executeActions } from './actions.js';
+import { executeActions, undoActions, canUndo, clearUndoManifest } from './actions.js';
 
 // ── Configuration ──────────────────────────────────────────────
 
@@ -33,6 +33,8 @@ const els = {
   btnBack: document.getElementById('btn-back'),
   btnScanAgain: document.getElementById('btn-scan-again'),
   btnDoneDisconnect: document.getElementById('btn-done-disconnect'),
+  btnUndo: document.getElementById('btn-undo'),
+  undoSection: document.querySelector('.undo-section'),
   connectError: document.getElementById('connect-error'),
   connectedEmail: document.getElementById('connected-email'),
   connectedBanner: document.getElementById('connected-banner'),
@@ -159,6 +161,7 @@ els.btnConnect.addEventListener('click', () => {
 });
 
 els.btnDisconnect.addEventListener('click', () => {
+  clearUndoManifest();
   revokeAuth();
 });
 
@@ -205,7 +208,47 @@ els.btnScanAgain.addEventListener('click', async () => {
 });
 
 els.btnDoneDisconnect.addEventListener('click', () => {
+  clearUndoManifest();
   revokeAuth();
+});
+
+els.btnUndo.addEventListener('click', async () => {
+  if (!canUndo()) return;
+
+  // Confirm before undoing
+  els.btnUndo.disabled = true;
+  els.btnUndo.textContent = 'Undoing...';
+
+  try {
+    const stats = await undoActions((completed, total) => {
+      els.btnUndo.textContent = `Undoing... ${completed} / ${total}`;
+    });
+
+    // Show undo results
+    els.doneResults.replaceChildren();
+    const header = document.querySelector('.done-header h2');
+    if (header) header.textContent = 'Changes reversed';
+
+    const lines = [];
+    if (stats.restored > 0) lines.push(`${stats.restored} emails moved back to your inbox.`);
+    if (stats.unlabelled > 0) lines.push(`${stats.unlabelled} labels removed.`);
+    lines.push('Everything is back to how it was.');
+
+    for (const line of lines) {
+      const p = document.createElement('p');
+      p.textContent = line;
+      els.doneResults.appendChild(p);
+    }
+
+    // Hide undo section after use
+    if (els.undoSection) els.undoSection.hidden = true;
+
+  } catch (err) {
+    els.btnUndo.disabled = false;
+    els.btnUndo.textContent = 'Undo everything';
+    showError(err.message || 'Something went wrong while undoing.');
+    showView('connect');
+  }
 });
 
 // ── Initialise ─────────────────────────────────────────────────

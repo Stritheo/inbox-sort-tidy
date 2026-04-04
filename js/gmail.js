@@ -137,6 +137,44 @@ export async function fetchMessageMetadata(messageIds, onProgress) {
 }
 
 /**
+ * Restore messages to the inbox by adding the INBOX label.
+ * @param {string[]} messageIds
+ */
+export async function batchUnarchive(messageIds) {
+  const CHUNK = 1000;
+  for (let i = 0; i < messageIds.length; i += CHUNK) {
+    const chunk = messageIds.slice(i, i + CHUNK);
+    await gmailFetch('/messages/batchModify', {
+      method: 'POST',
+      body: JSON.stringify({
+        ids: chunk,
+        addLabelIds: ['INBOX'],
+      }),
+    });
+  }
+}
+
+/**
+ * Remove a label from messages (without changing inbox status).
+ * @param {string[]} messageIds
+ * @param {string} labelId
+ */
+export async function batchRemoveLabel(messageIds, labelId) {
+  const CHUNK = 1000;
+  for (let i = 0; i < messageIds.length; i += CHUNK) {
+    const chunk = messageIds.slice(i, i + CHUNK);
+    await gmailFetch('/messages/batchModify', {
+      method: 'POST',
+      body: JSON.stringify({
+        ids: chunk,
+        removeLabelIds: [labelId],
+        addLabelIds: ['INBOX'],
+      }),
+    });
+  }
+}
+
+/**
  * Archive messages by removing the INBOX label.
  * @param {string[]} messageIds -- up to thousands; chunked into 1000 per call
  */
