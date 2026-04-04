@@ -2,7 +2,9 @@
   "permissions": {
     "allow": [
       "Bash(mkdir -p docs)",
-      "Bash(mv build-prompt.md risk-assessment.md setup-guide.md docs/)"
+      "Bash(mv build-prompt.md risk-assessment.md setup-guide.md docs/)",
+      "Bash(GH=/tmp/gh/gh_2.65.0_macOS_arm64/bin/gh)",
+      "Bash($GH auth:*)"
     ]
   }
 }

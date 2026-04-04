@@ -136,6 +136,7 @@ h1 {
   line-height: var(--leading-relaxed);
   max-width: 28rem;
   margin: 0 auto 2.5rem;
+  text-wrap: balance;
 }
 
 /* ── Connect button (inherits btn-large size, custom fill) ───── */
@@ -171,12 +172,14 @@ button.btn-connect:active {
   font-weight: 500;
   color: var(--text-secondary);
   margin-bottom: 0.125rem;
+  text-wrap: balance;
 }
 
 .trust-detail {
   font-size: var(--text-sm);
   color: var(--text-tertiary);
   margin-bottom: 0.125rem;
+  text-wrap: balance;
 }
 
 .trust-links {
@@ -236,6 +239,7 @@ button.btn-connect:active {
   font-size: var(--text-base);
   margin-bottom: 1.5rem;
   line-height: var(--leading-normal);
+  text-wrap: balance;
 }
 
 /* ── Connected banner ─────────────────────────────────────────── */
@@ -363,28 +367,30 @@ button[class*="btn-"]:focus-visible {
   outline-offset: 2px;
 }
 
-/* Default size (used by primary, secondary, go) */
+/* Default size (used by primary, secondary, go, undo) */
 button.btn-primary,
-button.btn-secondary {
-  padding: 0.625rem 1.5rem;
+button.btn-secondary,
+button.btn-undo {
+  padding: 0.625rem 1.75rem;
   font-size: var(--text-base);
-  border-radius: var(--radius-sm);
-  min-height: 40px;
+  border-radius: var(--radius-full);
+  min-height: 44px;
 }
 
 /* Large size (connect, execute) */
 button.btn-large,
 button.btn-connect {
-  padding: 0.875rem 2rem;
+  padding: 0.875rem 2.25rem;
   font-size: var(--text-base);
+  border-radius: var(--radius-full);
   min-height: 48px;
 }
 
 /* Compact size (disconnect, inline actions) */
 button.btn-ghost {
-  padding: 0.375rem 0.875rem;
+  padding: 0.375rem 1rem;
   font-size: var(--text-sm);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-full);
   min-height: 32px;
 }
 
@@ -463,6 +469,7 @@ button.btn-ghost:hover {
 }
 
 .button-group--centre { justify-content: center; }
+.button-group--column { flex-direction: column; align-items: center; }
 
 .cancel-btn { margin-top: 1rem; }
 
@@ -607,12 +614,8 @@ button.btn-ghost:hover {
   text-align: center;
 }
 
-/* Undo uses ghost sizing with dashed border */
+/* Undo: pill with dashed border */
 button.btn-undo {
-  padding: 0.625rem 1.5rem;
-  font-size: var(--text-base);
-  border-radius: var(--radius-sm);
-  min-height: 40px;
   background: transparent;
   color: var(--text-tertiary);
   border: 1px dashed var(--border);
@@ -764,11 +767,7 @@ button.btn-undo:disabled {
   gap: 0.75rem;
 }
 
-button.btn-large {
-  padding: 0.875rem 2.5rem;
-  font-size: var(--text-base);
-  border-radius: var(--radius);
-}
+/* btn-large in preview actions inherits from the base rule above */
 
 button.btn-text {
   background: none;
@@ -807,11 +806,23 @@ button.btn-text:focus-visible {
 }
 
 /* ── Scan choice (large inbox) ────────────────────────────────── */
+.scan-choice {
+  text-align: center;
+}
+
+.scan-choice h2 {
+  margin-bottom: 0.25rem;
+}
+
+.scan-choice > p {
+  margin-bottom: 1.5rem;
+}
+
 .choice-hint {
   font-size: var(--text-sm);
   color: var(--text-tertiary);
-  margin-top: -0.375rem;
-  margin-bottom: 0.75rem;
+  margin-top: 0.25rem;
+  margin-bottom: 1rem;
 }
 
 .results-stats {
@@ -828,6 +839,18 @@ button.btn-text:focus-visible {
 }
 
 .results-stats p:last-child {
+  border-bottom: none;
+}
+
+.done-more-hint {
+  margin-top: 1rem;
+  padding: 0.75rem 1rem;
+  background: var(--accent-light);
+  border-radius: var(--radius-sm);
+  color: var(--accent-hover);
+  font-weight: 500;
+  text-align: center;
+  text-wrap: balance;
   border-bottom: none;
 }
 

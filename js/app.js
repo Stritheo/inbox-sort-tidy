@@ -142,6 +142,8 @@ async function startScan() {
   if (_isScanning) return;
   _isScanning = true;
   showView('scanning');
+  // Show indeterminate progress bar during counting (removeAttribute makes it pulse)
+  if (els.scanProgress) els.scanProgress.removeAttribute('value');
   renderProgress(0, 0, 'Counting emails in your inbox...', els.scanProgress, els.scanStatus);
   allMessages = [];
 
@@ -180,27 +182,32 @@ async function startScan() {
 function showScanChoice(totalCount) {
   const est = estimateScanTime(totalCount);
 
+  // If count hit the 50k cap, show "over" to avoid fake-looking round number
+  const isAtCap = totalCount >= 50000;
+  const countText = isAtCap
+    ? `Over ${totalCount.toLocaleString()} emails`
+    : `${totalCount.toLocaleString()} emails found`;
+
   // Build choice UI inside the scanning view card
   const container = views.scanning.querySelector('.view-card');
   container.replaceChildren();
+  container.classList.add('scan-choice');
 
   const h2 = document.createElement('h2');
-  h2.textContent = `${totalCount.toLocaleString()} emails found`;
+  h2.textContent = countText;
   container.appendChild(h2);
 
   const p = document.createElement('p');
-  p.textContent = 'That is a big inbox. Choose how to tackle it:';
+  p.textContent = 'Choose how to tackle this:';
   container.appendChild(p);
 
   const btnGroup = document.createElement('div');
-  btnGroup.classList.add('button-group');
-  btnGroup.style.flexDirection = 'column';
-  btnGroup.style.gap = '0.75rem';
+  btnGroup.classList.add('button-group', 'button-group--column');
 
   // Wave option (recommended)
   const waveBtn = document.createElement('button');
   waveBtn.type = 'button';
-  waveBtn.classList.add('btn-primary');
+  waveBtn.classList.add('btn-primary', 'btn-large');
   waveBtn.textContent = 'Scan 2,000 at a time';
   waveBtn.addEventListener('click', async () => {
     restoreScanningView();
@@ -217,8 +224,8 @@ function showScanChoice(totalCount) {
   // Full option
   const fullBtn = document.createElement('button');
   fullBtn.type = 'button';
-  fullBtn.classList.add('btn-secondary');
-  fullBtn.textContent = `Scan all ${totalCount.toLocaleString()} at once`;
+  fullBtn.classList.add('btn-secondary', 'btn-large');
+  fullBtn.textContent = isAtCap ? 'Scan everything at once' : `Scan all ${totalCount.toLocaleString()} at once`;
   fullBtn.addEventListener('click', async () => {
     restoreScanningView();
     try { await runFullScan(); }
@@ -411,6 +418,15 @@ els.btnExecute.addEventListener('click', async () => {
     });
 
     renderResults(stats, els.doneResults);
+
+    // If the inbox was capped at 50k, prompt to scan again for remaining
+    const scanState = getScanProgress();
+    if (scanState && scanState.remaining > 0) {
+      const moreP = document.createElement('p');
+      moreP.className = 'done-more-hint';
+      moreP.textContent = `There are more emails in your inbox. Tap "Scan Again" to keep going.`;
+      els.doneResults.appendChild(moreP);
+    }
 
     // Show undo section if available
     if (els.undoSection) {
