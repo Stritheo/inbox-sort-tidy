@@ -50,12 +50,28 @@ const els = {
   execStatus: document.getElementById('exec-status'),
   doneResults: document.getElementById('done-results'),
   scanMoreContainer: document.getElementById('scan-more-container'),
+  labelNewsletters: document.getElementById('label-newsletters'),
+  labelReceipts: document.getElementById('label-receipts'),
+  labelFyi: document.getElementById('label-fyi'),
+  previewLabelHint: document.getElementById('preview-label-hint'),
 };
 
 // ── State ──────────────────────────────────────────────────────
 
 let senderGroups = [];
-let allMessages = []; // accumulates across waves
+let allMessages = [];
+
+/**
+ * Read custom label names from the config inputs.
+ * Falls back to defaults if inputs are empty.
+ */
+function getLabelNames() {
+  return {
+    newsletters: (els.labelNewsletters && els.labelNewsletters.value.trim()) || 'Newsletters',
+    receipts: (els.labelReceipts && els.labelReceipts.value.trim()) || 'Receipts',
+    fyi: (els.labelFyi && els.labelFyi.value.trim()) || 'FYI',
+  };
+} // accumulates across waves
 
 // ── View management ────────────────────────────────────────────
 
@@ -329,6 +345,27 @@ els.btnDisconnect.addEventListener('click', () => {
 els.btnPreview.addEventListener('click', () => {
   saveCurrentChoices(senderGroups);
   renderPreview(senderGroups, els.previewSummary);
+
+  // Show which labels will be created
+  const labels = getLabelNames();
+  const labelList = [];
+  // Only mention labels that will actually be used
+  const counts = { newsletters: 0, receipts: 0, fyi: 0 };
+  for (const g of senderGroups) {
+    const cat = g.assignedCategory || g.suggestedCategory;
+    if (cat === 'newsletters') counts.newsletters += g.messages.length;
+    else if (cat === 'receipts') counts.receipts += g.messages.length;
+    else if (cat === 'fyi') counts.fyi += g.messages.length;
+  }
+  if (counts.newsletters > 0) labelList.push(`"${labels.newsletters}"`);
+  if (counts.receipts > 0) labelList.push(`"${labels.receipts}"`);
+  if (counts.fyi > 0) labelList.push(`"${labels.fyi}"`);
+
+  if (els.previewLabelHint && labelList.length > 0) {
+    els.previewLabelHint.textContent = `Labels that will be created in Gmail: ${labelList.join(', ')}`;
+    els.previewLabelHint.hidden = false;
+  }
+
   showView('preview');
 });
 
@@ -341,7 +378,8 @@ els.btnExecute.addEventListener('click', async () => {
   renderProgress(0, 0, 'Working...', els.execProgress, els.execStatus);
 
   try {
-    const stats = await executeActions(senderGroups, (completed, total) => {
+    const labels = getLabelNames();
+    const stats = await executeActions(senderGroups, labels, (completed, total) => {
       renderProgress(completed, total, `Tidying... ${completed} / ${total} processed`, els.execProgress, els.execStatus);
     });
 

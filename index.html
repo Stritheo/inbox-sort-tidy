@@ -63,6 +63,26 @@
         </div>
         <h2>Your inbox, sorted</h2>
         <p>Each sender has been categorised. Adjust any that need changing, then preview.</p>
+
+        <details class="label-config" id="label-config">
+          <summary>Label names <span class="config-hint">— tap to rename</span></summary>
+          <p class="config-description">These labels will be created in your Gmail account. Rename them to suit how you organise things.</p>
+          <div class="label-fields">
+            <div class="label-field">
+              <label for="label-newsletters">Newsletters label</label>
+              <input type="text" id="label-newsletters" value="Newsletters" maxlength="40" autocomplete="off">
+            </div>
+            <div class="label-field">
+              <label for="label-receipts">Receipts label</label>
+              <input type="text" id="label-receipts" value="Receipts" maxlength="40" autocomplete="off">
+            </div>
+            <div class="label-field">
+              <label for="label-fyi">FYI label</label>
+              <input type="text" id="label-fyi" value="FYI" maxlength="40" autocomplete="off">
+            </div>
+          </div>
+        </details>
+
         <div id="sender-table-container"></div>
         <div class="button-group">
           <button id="btn-preview" type="button" class="btn-primary">Preview Changes</button>
@@ -80,6 +100,7 @@
       <div class="view-card">
         <h2>Ready to tidy</h2>
         <p>Here is exactly what will change. Emails are moved, never deleted. You can undo everything afterwards.</p>
+        <p class="inline-hint" id="preview-label-hint"></p>
         <div id="preview-summary"></div>
         <div class="button-group">
           <button id="btn-execute" type="button" class="btn-primary btn-go">Tidy My Inbox</button>

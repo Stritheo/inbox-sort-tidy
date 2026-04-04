@@ -31,12 +31,14 @@ function effectiveAction(group) {
  * Execute archive/label operations for all sender groups.
  * Stores a manifest so everything can be undone.
  * @param {object[]} senderGroups
+ * @param {{ newsletters: string, receipts: string, fyi: string }} labelNames -- custom label names
  * @param {(completed: number, total: number) => void} onProgress
  * @returns {Promise<object>} stats
  */
-export async function executeActions(senderGroups, onProgress) {
-  // Phase 1: Ensure labels exist
-  const labelMap = await ensureLabels(['Newsletters', 'Receipts', 'FYI']);
+export async function executeActions(senderGroups, labelNames, onProgress) {
+  // Phase 1: Ensure labels exist (using custom names)
+  const names = labelNames || { newsletters: 'Newsletters', receipts: 'Receipts', fyi: 'FYI' };
+  const labelMap = await ensureLabels([names.newsletters, names.receipts, names.fyi]);
 
   // Phase 2: Group message IDs by action
   const actions = { archive: [], newsletters: [], receipts: [], fyi: [] };
@@ -71,9 +73,9 @@ export async function executeActions(senderGroups, onProgress) {
   }
 
   const labelActions = [
-    ['newsletters', 'Newsletters'],
-    ['receipts', 'Receipts'],
-    ['fyi', 'FYI'],
+    ['newsletters', names.newsletters],
+    ['receipts', names.receipts],
+    ['fyi', names.fyi],
   ];
 
   for (const [key, labelName] of labelActions) {
@@ -88,9 +90,9 @@ export async function executeActions(senderGroups, onProgress) {
   _lastManifest = {
     archived: [...actions.archive],
     labelled: [
-      { ids: [...actions.newsletters], labelId: labelMap['Newsletters'], labelName: 'Newsletters' },
-      { ids: [...actions.receipts], labelId: labelMap['Receipts'], labelName: 'Receipts' },
-      { ids: [...actions.fyi], labelId: labelMap['FYI'], labelName: 'FYI' },
+      { ids: [...actions.newsletters], labelId: labelMap[names.newsletters], labelName: names.newsletters },
+      { ids: [...actions.receipts], labelId: labelMap[names.receipts], labelName: names.receipts },
+      { ids: [...actions.fyi], labelId: labelMap[names.fyi], labelName: names.fyi },
     ].filter(g => g.ids.length > 0),
   };
 
