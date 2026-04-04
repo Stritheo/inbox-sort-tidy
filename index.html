@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy"
+    content="default-src 'self';
+      script-src 'self' https://accounts.google.com/gsi/client;
+      style-src 'self';
+      connect-src https://gmail.googleapis.com https://www.googleapis.com https://accounts.google.com;
+      frame-src https://accounts.google.com;
+      img-src 'self' data:;">
+  <title>Inbox Sort and Tidy</title>
+  <link rel="stylesheet" href="css/pico.min.css">
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+  <main class="container">
+
+    <!-- View: Connect -->
+    <section id="view-connect">
+      <div class="hero">
+        <h1>Inbox Sort and Tidy</h1>
+        <p>A free tool that scans your Gmail, groups emails by sender, and lets you archive or label them in bulk. No server, no AI, no data stored.</p>
+        <button id="btn-connect" type="button">Connect Gmail</button>
+      </div>
+      <div class="badges" style="justify-content: center;">
+        <span class="badge">No server</span>
+        <span class="badge">No data stored</span>
+        <span class="badge">No AI</span>
+        <span class="badge">Open source</span>
+      </div>
+      <div id="connect-error" class="error-alert" hidden></div>
+    </section>
+
+    <!-- View: Scanning -->
+    <section id="view-scanning" hidden>
+      <h2>Scanning your inbox</h2>
+      <p class="progress-label" id="scan-status">Starting scan...</p>
+      <progress id="scan-progress" max="100" value="0"></progress>
+      <p><small>This usually takes under a minute.</small></p>
+    </section>
+
+    <!-- View: Results (review sender table) -->
+    <section id="view-results" hidden>
+      <div class="connected-banner" id="connected-banner">
+        <span id="connected-email"></span>
+        <button id="btn-disconnect" type="button" class="outline secondary" style="margin:0; padding:0.25rem 0.75rem; font-size:0.85rem;">Disconnect</button>
+      </div>
+      <h2>Review sender categories</h2>
+      <p>We grouped your inbox by sender and suggested a category for each. Change any you disagree with, then preview the changes.</p>
+      <div id="sender-table-container"></div>
+      <div class="button-group">
+        <button id="btn-preview" type="button">Preview Changes</button>
+      </div>
+    </section>
+
+    <!-- View: Preview -->
+    <section id="view-preview" hidden>
+      <h2>Preview changes</h2>
+      <p>Here is what will happen when you press Execute.</p>
+      <div id="preview-summary"></div>
+      <div class="button-group">
+        <button id="btn-execute" type="button">Execute</button>
+        <button id="btn-back" type="button" class="outline secondary">Go Back</button>
+      </div>
+    </section>
+
+    <!-- View: Executing -->
+    <section id="view-executing" hidden>
+      <h2>Tidying your inbox</h2>
+      <p class="progress-label" id="exec-status">Working...</p>
+      <progress id="exec-progress" max="100" value="0"></progress>
+    </section>
+
+    <!-- View: Done -->
+    <section id="view-done" hidden>
+      <h2>All done</h2>
+      <div id="done-results" class="results-stats"></div>
+      <div class="button-group">
+        <button id="btn-scan-again" type="button">Scan Again</button>
+        <button id="btn-done-disconnect" type="button" class="outline secondary">Disconnect</button>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="container">
+    <small>
+      <a href="privacy-policy.html">Privacy Policy</a> &middot;
+      <a href="terms.html">Terms of Service</a> &middot;
+      <a href="https://github.com/Stritheo/inbox-sort-tidy" target="_blank" rel="noopener">Source Code</a>
+    </small>
+  </footer>
+
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
