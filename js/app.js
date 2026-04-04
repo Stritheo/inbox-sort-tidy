@@ -129,6 +129,7 @@ document.addEventListener('auth:disconnected', () => {
   senderGroups = [];
   allMessages = [];
   resetScanState();
+  clearUndoManifest();
   showView('connect');
   clearError();
 });
@@ -370,10 +371,12 @@ els.btnPreview.addEventListener('click', () => {
 });
 
 els.btnBack.addEventListener('click', () => {
+  els.btnExecute.disabled = false;
   showView('results');
 });
 
 els.btnExecute.addEventListener('click', async () => {
+  els.btnExecute.disabled = true;
   showView('executing');
   renderProgress(0, 0, 'Working...', els.execProgress, els.execStatus);
 

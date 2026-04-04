@@ -66,8 +66,12 @@ export async function executeActions(senderGroups, labelNames, onProgress) {
   const total = actions.archive.length + actions.newsletters.length +
                 actions.receipts.length + actions.fyi.length;
 
+  // Build manifest incrementally so partial failures can still be undone
+  _lastManifest = { archived: [], labelled: [] };
+
   if (actions.archive.length) {
     await batchArchive(actions.archive);
+    _lastManifest.archived = [...actions.archive];
     completed += actions.archive.length;
     if (onProgress) onProgress(completed, total);
   }
@@ -81,20 +85,15 @@ export async function executeActions(senderGroups, labelNames, onProgress) {
   for (const [key, labelName] of labelActions) {
     if (actions[key].length) {
       await batchAddLabel(actions[key], labelMap[labelName]);
+      _lastManifest.labelled.push({
+        ids: [...actions[key]],
+        labelId: labelMap[labelName],
+        labelName,
+      });
       completed += actions[key].length;
       if (onProgress) onProgress(completed, total);
     }
   }
-
-  // Phase 4: Store manifest for undo
-  _lastManifest = {
-    archived: [...actions.archive],
-    labelled: [
-      { ids: [...actions.newsletters], labelId: labelMap[names.newsletters], labelName: names.newsletters },
-      { ids: [...actions.receipts], labelId: labelMap[names.receipts], labelName: names.receipts },
-      { ids: [...actions.fyi], labelId: labelMap[names.fyi], labelName: names.fyi },
-    ].filter(g => g.ids.length > 0),
-  };
 
   return {
     archived: actions.archive.length,

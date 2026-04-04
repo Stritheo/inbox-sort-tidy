@@ -51,9 +51,11 @@ async function gmailFetch(path, options = {}) {
   if (res.status === 401) throw new AuthExpiredError();
 
   if (res.status === 429) {
+    const attempt = (options._retryCount || 0) + 1;
+    if (attempt > 3) throw new GmailError(429, 'Gmail rate limit exceeded after 3 retries. Try again in a few minutes.');
     const retryAfter = parseInt(res.headers.get('Retry-After') || '5', 10);
     await sleep(retryAfter * 1000);
-    return gmailFetch(path, options); // single retry
+    return gmailFetch(path, { ...options, _retryCount: attempt });
   }
 
   if (!res.ok) throw new GmailError(res.status, await res.text());
@@ -116,13 +118,19 @@ export async function fetchMessageMetadata(messageIds, onProgress) {
   for (let i = 0; i < messageIds.length; i += BATCH_SIZE) {
     const batch = messageIds.slice(i, i + BATCH_SIZE);
 
-    const batchResults = await Promise.all(
+    const batchSettled = await Promise.allSettled(
       batch.map(id =>
         gmailFetch(`/messages/${id}?format=metadata&metadataHeaders=From&metadataHeaders=Subject&metadataHeaders=List-Unsubscribe`)
       )
     );
 
-    results.push(...batchResults);
+    // Keep successful results, skip transient failures (deleted messages, 500s)
+    for (const result of batchSettled) {
+      if (result.status === 'fulfilled') {
+        results.push(result.value);
+      }
+      // Silently skip rejected fetches -- message may have been deleted or server hiccup
+    }
 
     if (onProgress) {
       onProgress(results.length, messageIds.length);
