@@ -127,22 +127,13 @@ h1 {
   margin: 0 auto 2.5rem;
 }
 
-/* ── Connect button ───────────────────────────────────────────── */
+/* ── Connect button (inherits btn-large size, custom fill) ───── */
 button.btn-connect {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.625rem;
-  padding: 0.875rem 2rem;
   background: var(--surface);
   color: var(--text);
   border: 1px solid var(--border);
   border-radius: var(--radius-full);
-  font-size: 0.95rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
   box-shadow: var(--shadow-xs);
-  letter-spacing: -0.01em;
 }
 
 button.btn-connect:hover {
@@ -154,11 +145,6 @@ button.btn-connect:hover {
 button.btn-connect:active {
   transform: translateY(0);
   box-shadow: var(--shadow-xs);
-}
-
-button.btn-connect:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
 }
 
 /* ── Trust section ────────────────────────────────────────────── */
@@ -318,22 +304,73 @@ progress::-moz-progress-bar {
   margin-top: 0.75rem;
 }
 
-/* ── Buttons ──────────────────────────────────────────────────── */
-button.btn-primary {
+/* ── Buttons ──────────────────────────────────────────────────
+   Three tiers: default, compact, text.
+   Two fills: filled (primary/go) and outlined (secondary/ghost).
+   All buttons share base styles via the [class*="btn-"] selector.
+   ────────────────────────────────────────────────────────────── */
+
+/* Base: shared by all buttons */
+button[class*="btn-"] {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 0.5rem;
-  padding: 0.625rem 1.5rem;
-  background: var(--accent);
-  color: white;
-  border: none;
-  border-radius: var(--radius-sm);
-  font-size: 0.9rem;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.15s ease;
+  border: none;
+  text-decoration: none;
+}
+
+button[class*="btn-"]:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Default size (used by primary, secondary, go) */
+button.btn-primary,
+button.btn-secondary {
+  padding: 0.625rem 1.5rem;
+  font-size: 0.875rem;
+  border-radius: var(--radius-sm);
+  min-height: 40px;
+}
+
+/* Large size (connect, execute) */
+button.btn-large,
+button.btn-connect {
+  padding: 0.875rem 2rem;
+  font-size: 0.95rem;
+  min-height: 48px;
+}
+
+/* Compact size (disconnect, inline actions) */
+button.btn-ghost {
+  padding: 0.375rem 0.875rem;
+  font-size: 0.8rem;
+  border-radius: var(--radius-sm);
+  min-height: 32px;
+}
+
+/* Text button (go back, cancel) */
+button.btn-text {
+  background: none;
+  border: none;
+  color: var(--text-tertiary);
+  font-size: 0.85rem;
+  padding: 0.375rem 0.75rem;
+}
+
+button.btn-text:hover { color: var(--text-secondary); }
+
+/* ── Fills ── */
+
+/* Primary: filled accent */
+button.btn-primary {
+  background: var(--accent);
+  color: white;
   box-shadow: var(--shadow-xs);
-  letter-spacing: -0.01em;
 }
 
 button.btn-primary:hover {
@@ -342,35 +379,28 @@ button.btn-primary:hover {
   transform: translateY(-1px);
 }
 
-button.btn-primary:active {
-  transform: translateY(0);
-}
+button.btn-primary:active { transform: translateY(0); }
 
-button.btn-primary:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
-
+/* Go: filled green (the commit action) */
 button.btn-go {
   background: var(--success);
+  color: white;
+  box-shadow: var(--shadow-xs);
 }
 
 button.btn-go:hover {
   background: #047857;
+  box-shadow: var(--shadow-sm);
+  transform: translateY(-1px);
 }
 
+button.btn-go:active { transform: translateY(0); }
+
+/* Secondary: outlined */
 button.btn-secondary {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.625rem 1.5rem;
   background: transparent;
   color: var(--text-secondary);
   border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  font-size: 0.9rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.15s ease;
 }
 
 button.btn-secondary:hover {
@@ -378,37 +408,16 @@ button.btn-secondary:hover {
   border-color: var(--text-tertiary);
 }
 
-button.btn-secondary:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
-
-button.btn-small {
-  padding: 0.25rem 0.625rem;
-  font-size: 0.75rem;
-  border-radius: 6px;
-}
-
+/* Ghost: outlined, quieter (for inline use like disconnect) */
 button.btn-ghost {
   background: transparent;
   color: var(--text-tertiary);
   border: 1px solid var(--border);
-  cursor: pointer;
-  transition: color 0.15s ease;
-  padding: 0.375rem 0.75rem;
-  font-size: 0.8rem;
-  border-radius: 6px;
-  min-height: 36px;
 }
 
 button.btn-ghost:hover {
   color: var(--text-secondary);
   border-color: var(--text-tertiary);
-}
-
-button.btn-ghost:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
 }
 
 .button-group {
@@ -559,35 +568,25 @@ button.btn-ghost:focus-visible {
   text-align: center;
 }
 
+/* Undo uses ghost sizing with dashed border */
 button.btn-undo {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 1.25rem;
+  padding: 0.625rem 1.5rem;
+  font-size: 0.875rem;
+  border-radius: var(--radius-sm);
+  min-height: 40px;
   background: transparent;
   color: var(--text-tertiary);
   border: 1px dashed var(--border);
-  border-radius: var(--radius-sm);
-  font-size: 0.85rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.15s ease;
 }
 
 button.btn-undo:hover {
   color: var(--text-secondary);
   border-color: var(--text-tertiary);
-  border-style: solid;
-}
-
-button.btn-undo:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
 }
 
 button.btn-undo:disabled {
   cursor: default;
-  opacity: 0.6;
+  opacity: 0.5;
 }
 
 .undo-hint {
