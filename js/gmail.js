@@ -77,7 +77,7 @@ export async function getProfile() {
  * @param {number} maxResults -- cap on total IDs to return
  * @returns {Promise<string[]>}
  */
-export async function listAllMessageIds(query, maxResults = 2000) {
+export async function listAllMessageIds(query, maxResults = 50000) {
   const ids = [];
   let pageToken = null;
 

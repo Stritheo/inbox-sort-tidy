@@ -1,10 +1,14 @@
 /**
  * app.js -- Entry point. State machine, view toggling, event wiring.
+ *
+ * Scan modes:
+ *   - Wave (default): scan 2,000 at a time, tidy, then "Scan more"
+ *   - Full: scan entire inbox in one go (user opts in for large inboxes)
  */
 
 import { initAuth, requestAuth, revokeAuth, isAuthenticated } from './auth.js';
 import { getProfile, AuthExpiredError } from './gmail.js';
-import { scanInbox } from './scanner.js';
+import { countInbox, scanNextWave, scanFullInbox, getScanProgress, estimateScanTime, resetScanState } from './scanner.js';
 import { classifyMessages } from './classifier.js';
 import { renderSenderTable, renderProgress, renderPreview, renderResults } from './ui.js';
 import { loadPreferences, applyPreferences, saveCurrentChoices } from './preferences.js';
@@ -45,11 +49,13 @@ const els = {
   execProgress: document.getElementById('exec-progress'),
   execStatus: document.getElementById('exec-status'),
   doneResults: document.getElementById('done-results'),
+  scanMoreContainer: document.getElementById('scan-more-container'),
 };
 
 // ── State ──────────────────────────────────────────────────────
 
 let senderGroups = [];
+let allMessages = []; // accumulates across waves
 
 // ── View management ────────────────────────────────────────────
 
@@ -57,7 +63,6 @@ function showView(name) {
   for (const [key, el] of Object.entries(views)) {
     el.hidden = key !== name;
   }
-  // Move focus to the new view for screen readers
   const active = views[name];
   if (active) {
     const heading = active.querySelector('h2');
@@ -106,6 +111,8 @@ document.addEventListener('auth:scope_denied', (e) => {
 
 document.addEventListener('auth:disconnected', () => {
   senderGroups = [];
+  allMessages = [];
+  resetScanState();
   showView('connect');
   clearError();
 });
@@ -114,14 +121,16 @@ document.addEventListener('auth:disconnected', () => {
 
 async function startScan() {
   showView('scanning');
-  renderProgress(0, 0, 'Starting scan...', els.scanProgress, els.scanStatus);
+  renderProgress(0, 0, 'Counting emails in your inbox...', els.scanProgress, els.scanStatus);
+  allMessages = [];
 
   try {
-    const messages = await scanInbox((completed, total, message) => {
-      renderProgress(completed, total, message, els.scanProgress, els.scanStatus);
+    // Step 1: Count total inbox messages (cheap: just lists IDs)
+    const totalCount = await countInbox((phase) => {
+      renderProgress(0, 0, phase, els.scanProgress, els.scanStatus);
     });
 
-    if (messages.length === 0) {
+    if (totalCount === 0) {
       showView('done');
       renderResults({ archived: 0, newsletters: 0, receipts: 0, fyi: 0, kept: 0 }, els.doneResults);
       const p = document.createElement('p');
@@ -130,26 +139,177 @@ async function startScan() {
       return;
     }
 
-    // Classify
-    renderProgress(0, 0, 'Analysing patterns...', els.scanProgress, els.scanStatus);
-    senderGroups = classifyMessages(messages);
+    // Step 2: If inbox is large, offer choice before scanning metadata
+    if (totalCount > 2500) {
+      showScanChoice(totalCount);
+      return;
+    }
 
-    // Apply saved preferences
-    const prefs = loadPreferences();
-    applyPreferences(senderGroups, prefs);
-
-    // Show results
-    renderSenderTable(senderGroups, els.senderTableContainer);
-    showView('results');
+    // Small inbox: scan everything as one wave
+    await runWaveScan();
 
   } catch (err) {
-    if (err instanceof AuthExpiredError) {
-      showView('connect');
-      showError('Session expired. Please reconnect Gmail.');
+    handleScanError(err);
+  }
+}
+
+/**
+ * Show the user a choice: scan in waves or scan everything.
+ */
+function showScanChoice(totalCount) {
+  const est = estimateScanTime(totalCount);
+
+  // Build choice UI inside the scanning view card
+  const container = views.scanning.querySelector('.view-card');
+  container.replaceChildren();
+
+  const h2 = document.createElement('h2');
+  h2.textContent = `${totalCount.toLocaleString()} emails found`;
+  container.appendChild(h2);
+
+  const p = document.createElement('p');
+  p.textContent = 'That is a big inbox. Choose how to tackle it:';
+  container.appendChild(p);
+
+  const btnGroup = document.createElement('div');
+  btnGroup.classList.add('button-group');
+  btnGroup.style.flexDirection = 'column';
+  btnGroup.style.gap = '0.75rem';
+
+  // Wave option (recommended)
+  const waveBtn = document.createElement('button');
+  waveBtn.type = 'button';
+  waveBtn.classList.add('btn-primary');
+  waveBtn.textContent = 'Scan 2,000 at a time';
+  waveBtn.addEventListener('click', async () => {
+    restoreScanningView();
+    try { await runWaveScan(); }
+    catch (err) { handleScanError(err); }
+  });
+  btnGroup.appendChild(waveBtn);
+
+  const waveHint = document.createElement('p');
+  waveHint.className = 'choice-hint';
+  waveHint.textContent = 'Recommended. Tidy in batches, under a minute each.';
+  btnGroup.appendChild(waveHint);
+
+  // Full option
+  const fullBtn = document.createElement('button');
+  fullBtn.type = 'button';
+  fullBtn.classList.add('btn-secondary');
+  fullBtn.textContent = `Scan all ${totalCount.toLocaleString()} at once`;
+  fullBtn.addEventListener('click', async () => {
+    restoreScanningView();
+    try { await runFullScan(); }
+    catch (err) { handleScanError(err); }
+  });
+  btnGroup.appendChild(fullBtn);
+
+  const fullHint = document.createElement('p');
+  fullHint.className = 'choice-hint';
+  fullHint.textContent = `Takes ${est}. One big operation.`;
+  btnGroup.appendChild(fullHint);
+
+  container.appendChild(btnGroup);
+}
+
+/**
+ * Restore the scanning view to its original progress bar state.
+ */
+function restoreScanningView() {
+  const container = views.scanning.querySelector('.view-card');
+  container.replaceChildren();
+  container.classList.add('progress-section');
+
+  const h2 = document.createElement('h2');
+  h2.textContent = 'Scanning your inbox';
+  container.appendChild(h2);
+
+  const status = document.createElement('p');
+  status.className = 'progress-label';
+  status.id = 'scan-status';
+  status.setAttribute('aria-live', 'polite');
+  status.textContent = 'Starting scan...';
+  container.appendChild(status);
+
+  const progress = document.createElement('progress');
+  progress.id = 'scan-progress';
+  progress.max = 100;
+  progress.value = 0;
+  progress.setAttribute('aria-label', 'Scan progress');
+  container.appendChild(progress);
+
+  const hint = document.createElement('p');
+  hint.className = 'progress-hint';
+  hint.textContent = 'This usually takes under a minute.';
+  container.appendChild(hint);
+
+  // Re-bind element references
+  els.scanProgress = progress;
+  els.scanStatus = status;
+}
+
+async function runWaveScan() {
+  renderProgress(0, 0, 'Scanning...', els.scanProgress, els.scanStatus);
+
+  const { messages, hasMore } = await scanNextWave((completed, total, message) => {
+    renderProgress(completed, total, message, els.scanProgress, els.scanStatus);
+  });
+
+  allMessages.push(...messages);
+  showResults(hasMore);
+}
+
+async function runFullScan() {
+  const progress = getScanProgress();
+  const hint = views.scanning.querySelector('.progress-hint');
+  if (hint && progress) {
+    hint.textContent = `Scanning ${progress.total.toLocaleString()} emails. This may take ${estimateScanTime(progress.total)}.`;
+  }
+
+  renderProgress(0, 0, 'Scanning...', els.scanProgress, els.scanStatus);
+
+  const { messages } = await scanFullInbox((completed, total, message) => {
+    renderProgress(completed, total, message, els.scanProgress, els.scanStatus);
+  });
+
+  allMessages.push(...messages);
+  showResults(false);
+}
+
+function showResults(hasMore) {
+  renderProgress(0, 0, 'Analysing patterns...', els.scanProgress, els.scanStatus);
+  senderGroups = classifyMessages(allMessages);
+
+  const prefs = loadPreferences();
+  applyPreferences(senderGroups, prefs);
+
+  renderSenderTable(senderGroups, els.senderTableContainer);
+
+  // Show/hide "Scan more" section
+  if (els.scanMoreContainer) {
+    if (hasMore) {
+      const progress = getScanProgress();
+      els.scanMoreContainer.hidden = false;
+      const remaining = els.scanMoreContainer.querySelector('.scan-more-count');
+      if (remaining && progress) {
+        remaining.textContent = `${progress.remaining.toLocaleString()} emails remaining`;
+      }
     } else {
-      showView('connect');
-      showError(err.message || 'Something went wrong during the scan.');
+      els.scanMoreContainer.hidden = true;
     }
+  }
+
+  showView('results');
+}
+
+function handleScanError(err) {
+  if (err instanceof AuthExpiredError) {
+    showView('connect');
+    showError('Session expired. Please reconnect Gmail.');
+  } else {
+    showView('connect');
+    showError(err.message || 'Something went wrong during the scan.');
   }
 }
 
@@ -162,6 +322,7 @@ els.btnConnect.addEventListener('click', () => {
 
 els.btnDisconnect.addEventListener('click', () => {
   clearUndoManifest();
+  resetScanState();
   revokeAuth();
 });
 
@@ -185,6 +346,14 @@ els.btnExecute.addEventListener('click', async () => {
     });
 
     renderResults(stats, els.doneResults);
+
+    // Show undo section if available
+    if (els.undoSection) {
+      els.undoSection.hidden = false;
+      els.btnUndo.disabled = false;
+      els.btnUndo.textContent = 'Undo everything';
+    }
+
     showView('done');
 
   } catch (err) {
@@ -200,6 +369,7 @@ els.btnExecute.addEventListener('click', async () => {
 
 els.btnScanAgain.addEventListener('click', async () => {
   if (isAuthenticated()) {
+    resetScanState();
     await startScan();
   } else {
     showView('connect');
@@ -209,13 +379,13 @@ els.btnScanAgain.addEventListener('click', async () => {
 
 els.btnDoneDisconnect.addEventListener('click', () => {
   clearUndoManifest();
+  resetScanState();
   revokeAuth();
 });
 
 els.btnUndo.addEventListener('click', async () => {
   if (!canUndo()) return;
 
-  // Confirm before undoing
   els.btnUndo.disabled = true;
   els.btnUndo.textContent = 'Undoing...';
 
@@ -224,7 +394,6 @@ els.btnUndo.addEventListener('click', async () => {
       els.btnUndo.textContent = `Undoing... ${completed} / ${total}`;
     });
 
-    // Show undo results
     els.doneResults.replaceChildren();
     const header = document.querySelector('.done-header h2');
     if (header) header.textContent = 'Changes reversed';
@@ -240,7 +409,6 @@ els.btnUndo.addEventListener('click', async () => {
       els.doneResults.appendChild(p);
     }
 
-    // Hide undo section after use
     if (els.undoSection) els.undoSection.hidden = true;
 
   } catch (err) {
@@ -251,17 +419,31 @@ els.btnUndo.addEventListener('click', async () => {
   }
 });
 
+// Scan more button (added dynamically to results view)
+const btnScanMore = document.getElementById('btn-scan-more');
+if (btnScanMore) {
+  btnScanMore.addEventListener('click', async () => {
+    if (!isAuthenticated()) {
+      showView('connect');
+      showError('Session expired. Please reconnect Gmail.');
+      return;
+    }
+    restoreScanningView();
+    showView('scanning');
+    try { await runWaveScan(); }
+    catch (err) { handleScanError(err); }
+  });
+}
+
 // ── Initialise ─────────────────────────────────────────────────
 
 if (!CLIENT_ID) {
   showError('This app has not been configured yet. If you are the developer, set CLIENT_ID in js/app.js.');
   els.btnConnect.disabled = true;
 } else {
-  // Wait for GIS library to load, then initialise
   const gisScript = document.querySelector('script[src*="accounts.google.com"]');
   if (gisScript) {
     gisScript.addEventListener('load', () => initAuth(CLIENT_ID));
-    // If already loaded (cached)
     if (typeof google !== 'undefined' && google.accounts) {
       initAuth(CLIENT_ID);
     }
