@@ -98,14 +98,13 @@
 
     <!-- ═══ View: Preview ═══ -->
     <section id="view-preview" hidden aria-label="Preview changes before applying" tabindex="-1">
-      <div class="view-card">
-        <h2>Ready to tidy</h2>
-        <p>Here is exactly what will change. Emails are moved, never deleted. You can undo everything afterwards.</p>
-        <p class="inline-hint" id="preview-label-hint"></p>
+      <div class="view-card preview-card">
         <div id="preview-summary"></div>
-        <div class="button-group">
-          <button id="btn-execute" type="button" class="btn-primary btn-go">Tidy My Inbox</button>
-          <button id="btn-back" type="button" class="btn-secondary">Go Back</button>
+        <p class="preview-safety">Emails are moved, never deleted. You can undo everything afterwards.</p>
+        <p class="preview-labels" id="preview-label-hint"></p>
+        <div class="preview-actions">
+          <button id="btn-execute" type="button" class="btn-primary btn-go btn-large">Tidy My Inbox</button>
+          <button id="btn-back" type="button" class="btn-text">or go back and adjust</button>
         </div>
       </div>
     </section>
