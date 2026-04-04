@@ -44,7 +44,6 @@ Three principles guide every design decision:
 ### Rules
 
 - **Never introduce a new colour.** If something needs emphasis, use `--accent`. If it needs to recede, use a neutral.
-- **Summary card top borders** are the only exception: they use category-specific colours (grey for archive, purple for newsletters, blue for receipts, amber for FYI, green for keep). These are functional, not decorative.
 - **Green is reserved for the primary action** ("Tidy My Inbox") and success states. Do not use green for secondary actions.
 
 ---
@@ -59,16 +58,36 @@ font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', syste
 
 Use the system font. No web fonts. This matches the device the user is already on.
 
-### Scale
+### Type scale (4 sizes only — no exceptions)
 
-| Element | Size | Weight | Tracking | Token |
-|---------|------|--------|----------|-------|
-| Page title (h1) | 1.75rem | 700 | -0.03em | `--text` |
-| Section heading (h2) | 1.25rem | 700 | -0.02em | `--text` |
-| Body / subtitle | 1.05rem | 400 | normal | `--text-secondary` |
-| Table text | 0.875rem | 400 | normal | `--text` |
-| Small labels | 0.75rem | 500-600 | 0.04-0.06em | `--text-tertiary`, uppercase |
-| Hints / captions | 0.75-0.8rem | 400 | normal | `--text-tertiary` |
+| Token | Size | Use for | Weight | Tracking |
+|-------|------|---------|--------|----------|
+| `--text-xl` | 1.75rem (28px) | h1 page title, preview headline | 700-800 | -0.03em |
+| `--text-lg` | 1.25rem (20px) | h2 section headings | 700 | -0.02em |
+| `--text-base` | 0.9375rem (15px) | Body, subtitle, buttons, trust copy, table data, progress labels | 400-500 | normal |
+| `--text-sm` | 0.8125rem (13px) | Captions, hints, footer, labels, compact buttons, config | 400-600 | normal or 0.04-0.06em (uppercase only) |
+
+**There are exactly 4 font sizes in the entire application.** Adding a fifth requires a design review.
+
+### Line height (3 values only)
+
+| Token | Value | Use for |
+|-------|-------|---------|
+| `--leading-tight` | 1.2 | Headings (h1, h2, h3) |
+| `--leading-normal` | 1.5 | Body text, buttons, labels, table cells |
+| `--leading-relaxed` | 1.6 | Subtitle, long-form descriptions |
+
+**Every `line-height` declaration must use one of these three tokens.** No raw numbers.
+
+### Spacing between text elements
+
+| Context | Margin | Rule |
+|---------|--------|------|
+| After h1 | 0.75rem | Gives room before subtitle |
+| After h2 | 0.375rem | Tight — h2 and its description are a unit |
+| Between body paragraphs | 0.125rem | Stacked trust lines read as a single block |
+| Between sections | 1.5-2.5rem | Breathing room between distinct areas |
+| After description before content | 1.5rem | e.g. after card description, before table |
 
 ### Rules
 
