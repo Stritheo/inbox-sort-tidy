@@ -37,7 +37,6 @@ export function renderSenderTable(senderGroups, container) {
 
   const table = document.createElement('table');
   table.classList.add('sender-table');
-  table.setAttribute('role', 'grid');
 
   // Header
   const thead = document.createElement('thead');
@@ -45,6 +44,7 @@ export function renderSenderTable(senderGroups, container) {
   for (const label of ['Emails', 'Sender', 'Category']) {
     const th = document.createElement('th');
     th.textContent = label;
+    th.setAttribute('scope', 'col');
     if (label === 'Emails') th.style.textAlign = 'right';
     headerRow.appendChild(th);
   }
@@ -146,17 +146,17 @@ export function renderPreview(senderGroups, container) {
   cards.classList.add('summary-cards');
 
   const items = [
-    { count: counts.archive, label: 'Archive' },
-    { count: counts.newsletters, label: 'Label: Newsletters' },
-    { count: counts.receipts, label: 'Label: Receipts' },
-    { count: counts.fyi, label: 'Label: FYI' },
-    { count: counts.keep, label: 'Keep in Inbox' },
+    { count: counts.archive, label: 'Archive', modifier: 'archive' },
+    { count: counts.newsletters, label: 'Newsletters', modifier: 'newsletters' },
+    { count: counts.receipts, label: 'Receipts', modifier: 'receipts' },
+    { count: counts.fyi, label: 'FYI', modifier: 'fyi' },
+    { count: counts.keep, label: 'Keep in Inbox', modifier: 'keep' },
   ];
 
   for (const item of items) {
     if (item.count === 0) continue;
     const card = document.createElement('div');
-    card.classList.add('summary-card');
+    card.classList.add('summary-card', `summary-card--${item.modifier}`);
 
     const countSpan = document.createElement('span');
     countSpan.classList.add('count');

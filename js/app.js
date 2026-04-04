@@ -55,6 +55,17 @@ function showView(name) {
   for (const [key, el] of Object.entries(views)) {
     el.hidden = key !== name;
   }
+  // Move focus to the new view for screen readers
+  const active = views[name];
+  if (active) {
+    const heading = active.querySelector('h2');
+    if (heading) {
+      heading.setAttribute('tabindex', '-1');
+      heading.focus();
+    } else if (active.hasAttribute('tabindex')) {
+      active.focus();
+    }
+  }
 }
 
 function showError(message) {
@@ -200,7 +211,8 @@ els.btnDoneDisconnect.addEventListener('click', () => {
 // ── Initialise ─────────────────────────────────────────────────
 
 if (!CLIENT_ID) {
-  showError('No OAuth Client ID configured. Set CLIENT_ID in js/app.js.');
+  showError('This app has not been configured yet. If you are the developer, set CLIENT_ID in js/app.js.');
+  els.btnConnect.disabled = true;
 } else {
   // Wait for GIS library to load, then initialise
   const gisScript = document.querySelector('script[src*="accounts.google.com"]');

@@ -14,87 +14,55 @@
   <link rel="stylesheet" href="css/app.css">
 </head>
 <body>
+  <a href="#view-connect" class="skip-link">Skip to main content</a>
   <main class="container">
 
     <!-- ═══ View: Connect ═══ -->
-    <section id="view-connect">
+    <section id="view-connect" aria-label="Connect your Gmail account">
       <div class="hero">
-        <div class="brand">
-          <div class="brand-icon">
-            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="white"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4-8 5-8-5V6l8 5 8-5v2z"/></svg>
-          </div>
-          <h1>Inbox Sort and Tidy</h1>
+        <div class="brand-icon" aria-hidden="true">
+          <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="white"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4-8 5-8-5V6l8 5 8-5v2z"/></svg>
         </div>
-        <p class="subtitle">Scan your Gmail, group emails by sender, and archive or label them in bulk. Free, private, and runs entirely in your browser.</p>
+        <h1>Inbox Sort and Tidy</h1>
+        <p class="subtitle">Group your Gmail by sender. Archive or label in bulk. Get back to what matters.</p>
 
-        <button id="btn-connect" type="button" class="btn-google">
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+        <button id="btn-connect" type="button" class="btn-connect" aria-label="Connect your Gmail account">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
           Connect Gmail
         </button>
       </div>
 
-      <div class="badges">
-        <span class="badge badge--safe">
-          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 1a4.5 4.5 0 00-4.5 4.5V9H5a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2v-6a2 2 0 00-2-2h-.5V5.5A4.5 4.5 0 0010 1zm3 8V5.5a3 3 0 10-6 0V9h6z" clip-rule="evenodd"/></svg>
-          No server
-        </span>
-        <span class="badge badge--safe">
-          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 1a4.5 4.5 0 00-4.5 4.5V9H5a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2v-6a2 2 0 00-2-2h-.5V5.5A4.5 4.5 0 0010 1zm3 8V5.5a3 3 0 10-6 0V9h6z" clip-rule="evenodd"/></svg>
-          No data stored
-        </span>
-        <span class="badge badge--safe">
-          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd"/></svg>
-          No AI
-        </span>
-        <span class="badge badge--open">
-          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 20 20" fill="currentColor"><path d="M12.316 3.051a1 1 0 01.633 1.265l-4 12a1 1 0 11-1.898-.632l4-12a1 1 0 011.265-.633zM5.707 6.293a1 1 0 010 1.414L3.414 10l2.293 2.293a1 1 0 11-1.414 1.414l-3-3a1 1 0 010-1.414l3-3a1 1 0 011.414 0zm8.586 0a1 1 0 011.414 0l3 3a1 1 0 010 1.414l-3 3a1 1 0 11-1.414-1.414L16.586 10l-2.293-2.293a1 1 0 010-1.414z"/></svg>
-          Open source
-        </span>
+      <div class="trust" aria-label="Privacy commitments">
+        <p class="trust-line">Your data never leaves this device. Nothing is saved, ever.</p>
+        <p class="trust-detail">Only sender names and subject lines are scanned. Email content is never read.</p>
       </div>
 
-      <div id="connect-error" class="error-alert" hidden></div>
-
-      <div class="how-it-works">
-        <h2>How it works</h2>
-        <div class="steps">
-          <div class="step">
-            <div class="step-number">1</div>
-            <h3>Connect</h3>
-            <p>Sign in with Google. We only read email headers, never message bodies.</p>
-          </div>
-          <div class="step">
-            <div class="step-number">2</div>
-            <h3>Review</h3>
-            <p>See your inbox grouped by sender with smart category suggestions.</p>
-          </div>
-          <div class="step">
-            <div class="step-number">3</div>
-            <h3>Tidy</h3>
-            <p>Archive or label in bulk. Undo any time from Gmail's All Mail.</p>
-          </div>
-        </div>
-      </div>
+      <div id="connect-error" class="error-alert" hidden role="alert"></div>
     </section>
 
     <!-- ═══ View: Scanning ═══ -->
-    <section id="view-scanning" hidden>
+    <section id="view-scanning" hidden aria-label="Scanning inbox" tabindex="-1">
       <div class="view-card progress-section">
+        <div class="scan-icon" aria-hidden="true">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        </div>
         <h2>Scanning your inbox</h2>
-        <p class="progress-label" id="scan-status">Starting scan...</p>
-        <progress id="scan-progress" max="100" value="0"></progress>
+        <p class="progress-label" id="scan-status" aria-live="polite">Starting scan...</p>
+        <progress id="scan-progress" max="100" value="0" aria-label="Scan progress"></progress>
         <p class="progress-hint">This usually takes under a minute.</p>
+        <div id="scan-error" class="error-alert" hidden role="alert"></div>
       </div>
     </section>
 
     <!-- ═══ View: Results (review sender table) ═══ -->
-    <section id="view-results" hidden>
+    <section id="view-results" hidden aria-label="Review sender categories" tabindex="-1">
       <div class="view-card">
         <div class="connected-banner" id="connected-banner">
           <span id="connected-email"></span>
-          <button id="btn-disconnect" type="button" class="btn-disconnect">Disconnect</button>
+          <button id="btn-disconnect" type="button" class="btn-ghost" aria-label="Disconnect Gmail account">Disconnect</button>
         </div>
-        <h2>Review sender categories</h2>
-        <p>We grouped your inbox by sender and suggested a category for each. Change any you disagree with, then preview the changes.</p>
+        <h2>Your inbox, sorted</h2>
+        <p>Each sender has been categorised. Adjust any that need changing, then preview.</p>
         <div id="sender-table-container"></div>
         <div class="button-group">
           <button id="btn-preview" type="button" class="btn-primary">Preview Changes</button>
@@ -103,37 +71,37 @@
     </section>
 
     <!-- ═══ View: Preview ═══ -->
-    <section id="view-preview" hidden>
+    <section id="view-preview" hidden aria-label="Preview changes before applying" tabindex="-1">
       <div class="view-card">
-        <h2>Preview changes</h2>
-        <p>Here is what will happen when you press Execute.</p>
+        <h2>Ready to tidy</h2>
+        <p>Here is exactly what will change. Nothing is deleted — archived emails stay in All Mail.</p>
         <div id="preview-summary"></div>
         <div class="button-group">
-          <button id="btn-execute" type="button" class="btn-primary btn-execute">Execute</button>
+          <button id="btn-execute" type="button" class="btn-primary btn-go">Tidy My Inbox</button>
           <button id="btn-back" type="button" class="btn-secondary">Go Back</button>
         </div>
       </div>
     </section>
 
     <!-- ═══ View: Executing ═══ -->
-    <section id="view-executing" hidden>
+    <section id="view-executing" hidden aria-label="Applying changes">
       <div class="view-card progress-section">
-        <h2>Tidying your inbox</h2>
-        <p class="progress-label" id="exec-status">Working...</p>
-        <progress id="exec-progress" max="100" value="0"></progress>
+        <h2>Tidying up</h2>
+        <p class="progress-label" id="exec-status" aria-live="polite">Working...</p>
+        <progress id="exec-progress" max="100" value="0" aria-label="Tidy progress"></progress>
       </div>
     </section>
 
     <!-- ═══ View: Done ═══ -->
-    <section id="view-done" hidden>
-      <div class="view-card">
+    <section id="view-done" hidden aria-label="Tidy complete" tabindex="-1">
+      <div class="view-card done-card">
         <div class="done-header">
-          <div class="check-circle">
-            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd"/></svg>
+          <div class="check-circle" aria-hidden="true">
+            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd"/></svg>
           </div>
-          <h2>All done</h2>
+          <h2>Inbox tidied</h2>
         </div>
-        <div id="done-results" class="results-stats"></div>
+        <div id="done-results" class="results-stats" aria-live="polite"></div>
         <div class="button-group" style="justify-content: center;">
           <button id="btn-scan-again" type="button" class="btn-primary">Scan Again</button>
           <button id="btn-done-disconnect" type="button" class="btn-secondary">Disconnect</button>
@@ -144,11 +112,13 @@
   </main>
 
   <footer class="container">
-    <small>
-      <a href="privacy-policy.html">Privacy Policy</a> &middot;
-      <a href="terms.html">Terms of Service</a> &middot;
-      <a href="https://github.com/Stritheo/inbox-sort-tidy" target="_blank" rel="noopener">Source Code</a>
-    </small>
+    <nav aria-label="Footer links">
+      <a href="privacy-policy.html">Privacy Policy</a>
+      <span aria-hidden="true">&middot;</span>
+      <a href="terms.html">Terms of Service</a>
+      <span aria-hidden="true">&middot;</span>
+      <a href="https://github.com/Stritheo/inbox-sort-tidy" target="_blank" rel="noopener" aria-label="Source Code (opens in a new tab)">Source Code</a>
+    </nav>
   </footer>
 
   <script src="https://accounts.google.com/gsi/client" async defer></script>
