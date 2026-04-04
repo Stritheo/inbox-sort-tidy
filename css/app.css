@@ -108,7 +108,7 @@ main.container {
 }
 
 .brand-icon:hover {
-  transform: scale(1.05) rotate(-2deg);
+  transform: scale(1.05);
 }
 
 h1 {
@@ -514,11 +514,7 @@ button.btn-ghost:focus-visible {
   letter-spacing: 0.04em;
 }
 
-.summary-card--archive { border-top: 2px solid var(--text-tertiary); }
-.summary-card--newsletters { border-top: 2px solid #7c3aed; }
-.summary-card--receipts { border-top: 2px solid var(--accent); }
-.summary-card--fyi { border-top: 2px solid #d97706; }
-.summary-card--keep { border-top: 2px solid var(--success); }
+/* Summary card variants removed -- no coloured top borders */
 
 /* ── Done ─────────────────────────────────────────────────────── */
 .done-card {
@@ -697,6 +693,32 @@ button.btn-undo:disabled {
   margin-bottom: 2rem;
 }
 
+.preview-headline {
+  font-size: 2rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--text);
+  margin-bottom: 1rem;
+}
+
+.preview-plan {
+  list-style: none;
+  margin: 0 0 0.5rem;
+  padding: 0;
+}
+
+.preview-plan li {
+  padding: 0.375rem 0;
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+}
+
+.preview-plan strong {
+  color: var(--text);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
 .preview-actions {
   display: flex;
   flex-direction: column;
@@ -714,11 +736,10 @@ button.btn-text {
   background: none;
   border: none;
   color: var(--text-tertiary);
-  font-size: 0.8rem;
+  font-size: 0.85rem;
   cursor: pointer;
-  padding: 0.25rem 0.5rem;
-  text-decoration: underline;
-  text-underline-offset: 2px;
+  padding: 0.375rem 0.75rem;
+  text-decoration: none;
 }
 
 button.btn-text:hover {

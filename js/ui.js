@@ -142,35 +142,36 @@ export function renderPreview(senderGroups, container) {
 
   container.replaceChildren();
 
-  const cards = document.createElement('div');
-  cards.classList.add('summary-cards');
+  // Total as headline
+  const total = counts.archive + counts.newsletters + counts.receipts + counts.fyi + counts.keep;
+  const headline = document.createElement('p');
+  headline.classList.add('preview-headline');
+  headline.textContent = `${total.toLocaleString()} emails`;
+  container.appendChild(headline);
+
+  // Plan as a clean list
+  const list = document.createElement('ul');
+  list.classList.add('preview-plan');
 
   const items = [
-    { count: counts.archive, label: 'Archive', modifier: 'archive' },
-    { count: counts.newsletters, label: 'Newsletters', modifier: 'newsletters' },
-    { count: counts.receipts, label: 'Receipts', modifier: 'receipts' },
-    { count: counts.fyi, label: 'FYI', modifier: 'fyi' },
-    { count: counts.keep, label: 'Keep in Inbox', modifier: 'keep' },
+    { count: counts.archive, text: 'archived' },
+    { count: counts.newsletters, text: 'labelled Newsletters' },
+    { count: counts.receipts, text: 'labelled Receipts' },
+    { count: counts.fyi, text: 'labelled FYI' },
+    { count: counts.keep, text: 'staying in your inbox' },
   ];
 
   for (const item of items) {
     if (item.count === 0) continue;
-    const card = document.createElement('div');
-    card.classList.add('summary-card', `summary-card--${item.modifier}`);
-
-    const countSpan = document.createElement('span');
-    countSpan.classList.add('count');
-    countSpan.textContent = item.count;
-
-    const labelSpan = document.createElement('span');
-    labelSpan.classList.add('label');
-    labelSpan.textContent = item.label;
-
-    card.append(countSpan, labelSpan);
-    cards.appendChild(card);
+    const li = document.createElement('li');
+    const num = document.createElement('strong');
+    num.textContent = item.count;
+    li.appendChild(num);
+    li.appendChild(document.createTextNode(` ${item.text}`));
+    list.appendChild(li);
   }
 
-  container.appendChild(cards);
+  container.appendChild(list);
   return counts;
 }
 
