@@ -53,7 +53,7 @@
         <p class="progress-label" id="scan-status" aria-live="polite">Starting scan...</p>
         <progress id="scan-progress" max="100" value="0" aria-label="Scan progress"></progress>
         <p class="progress-hint">This usually takes under a minute.</p>
-        <button id="btn-cancel-scan" type="button" class="btn-text" style="margin-top: 1rem;">Cancel</button>
+        <button id="btn-cancel-scan" type="button" class="btn-text cancel-btn">Cancel</button>
         <div id="scan-error" class="error-alert" hidden role="alert"></div>
       </div>
     </section>
@@ -131,13 +131,14 @@
           <h2>Inbox tidied</h2>
         </div>
         <div id="done-results" class="results-stats" aria-live="polite"></div>
-        <div class="button-group" style="justify-content: center;">
+        <div class="button-group button-group--centre">
           <button id="btn-scan-again" type="button" class="btn-primary">Scan Again</button>
           <button id="btn-done-disconnect" type="button" class="btn-secondary">Disconnect</button>
         </div>
         <div class="undo-section">
           <button id="btn-undo" type="button" class="btn-undo" aria-label="Undo all changes and put emails back in your inbox">Undo everything</button>
           <p class="undo-hint">Put every email back in your inbox, exactly as it was.</p>
+          <p class="undo-hint">Closing this page will remove the undo option.</p>
         </div>
       </div>
     </section>

@@ -102,7 +102,7 @@ export async function countInbox(onStatus) {
  * @param {(completed: number, total: number, message: string) => void} onProgress
  * @returns {Promise<{ messages: object[], hasMore: boolean }>}
  */
-export async function scanNextWave(onProgress) {
+export async function scanNextWave(onProgress, signal) {
   if (!_allInboxIds) {
     throw new Error('Call countInbox() before scanning.');
   }
@@ -118,7 +118,7 @@ export async function scanNextWave(onProgress) {
     if (onProgress) {
       onProgress(completed, waveTotal, `Scanning... ${_scannedCount + completed} / ${_allInboxIds.length} emails`);
     }
-  });
+  }, signal);
 
   _scannedCount += waveIds.length;
   const messages = rawMessages.map(normaliseMessage);
@@ -132,7 +132,7 @@ export async function scanNextWave(onProgress) {
  * @param {(completed: number, total: number, message: string) => void} onProgress
  * @returns {Promise<{ messages: object[], hasMore: boolean }>}
  */
-export async function scanFullInbox(onProgress) {
+export async function scanFullInbox(onProgress, signal) {
   if (!_allInboxIds) {
     throw new Error('Call countInbox() before scanning.');
   }
@@ -148,7 +148,7 @@ export async function scanFullInbox(onProgress) {
     if (onProgress) {
       onProgress(completed, total, `Scanning... ${completed} / ${total} emails`);
     }
-  });
+  }, signal);
 
   _scannedCount = total;
   const messages = rawMessages.map(normaliseMessage);

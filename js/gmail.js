@@ -20,7 +20,15 @@ export class AuthExpiredError extends Error {
 
 export class GmailError extends Error {
   constructor(status, body) {
-    super(`Gmail API error ${status}: ${body}`);
+    // Extract user-friendly message from Gmail API error format
+    let msg = `Gmail returned an error (${status}).`;
+    try {
+      const parsed = JSON.parse(body);
+      if (parsed.error && parsed.error.message) {
+        msg = parsed.error.message;
+      }
+    } catch { /* body wasn't JSON, use generic message */ }
+    super(msg);
     this.name = 'GmailError';
     this.status = status;
   }
@@ -39,12 +47,15 @@ async function gmailFetch(path, options = {}) {
   const token = getToken();
   if (!token) throw new AuthExpiredError();
 
+  const { _retryCount, signal, ...fetchOptions } = options;
+
   const res = await fetch(`${BASE}${path}`, {
-    ...options,
+    ...fetchOptions,
+    signal,
     headers: {
       'Authorization': `Bearer ${token}`,
       'Content-Type': 'application/json',
-      ...options.headers,
+      ...fetchOptions.headers,
     },
   });
 
@@ -110,17 +121,19 @@ export async function listAllMessageIds(query, maxResults = 50000) {
  * @param {(completed: number, total: number) => void} onProgress
  * @returns {Promise<object[]>}
  */
-export async function fetchMessageMetadata(messageIds, onProgress) {
+export async function fetchMessageMetadata(messageIds, onProgress, signal) {
   const BATCH_SIZE = 20;
   const BATCH_DELAY = 200;
   const results = [];
 
   for (let i = 0; i < messageIds.length; i += BATCH_SIZE) {
+    if (signal && signal.aborted) throw new DOMException('Scan cancelled.', 'AbortError');
+
     const batch = messageIds.slice(i, i + BATCH_SIZE);
 
     const batchSettled = await Promise.allSettled(
       batch.map(id =>
-        gmailFetch(`/messages/${id}?format=metadata&metadataHeaders=From&metadataHeaders=Subject&metadataHeaders=List-Unsubscribe`)
+        gmailFetch(`/messages/${id}?format=metadata&metadataHeaders=From&metadataHeaders=Subject&metadataHeaders=List-Unsubscribe`, { signal })
       )
     );
 

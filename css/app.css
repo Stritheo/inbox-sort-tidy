@@ -433,6 +433,10 @@ button.btn-ghost:hover {
   margin-top: 1.5rem;
 }
 
+.button-group--centre { justify-content: center; }
+
+.cancel-btn { margin-top: 1rem; }
+
 /* ── Sender table ─────────────────────────────────────────────── */
 .sender-table {
   font-size: 0.875rem;

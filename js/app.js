@@ -60,6 +60,8 @@ const els = {
 
 let senderGroups = [];
 let allMessages = [];
+let _isScanning = false;
+let _scanController = null; // AbortController for scan cancellation
 
 /**
  * Read custom label names from the config inputs.
@@ -137,6 +139,8 @@ document.addEventListener('auth:disconnected', () => {
 // ── Scan flow ──────────────────────────────────────────────────
 
 async function startScan() {
+  if (_isScanning) return;
+  _isScanning = true;
   showView('scanning');
   renderProgress(0, 0, 'Counting emails in your inbox...', els.scanProgress, els.scanStatus);
   allMessages = [];
@@ -267,17 +271,19 @@ function restoreScanningView() {
 }
 
 async function runWaveScan() {
+  _scanController = new AbortController();
   renderProgress(0, 0, 'Scanning...', els.scanProgress, els.scanStatus);
 
   const { messages, hasMore } = await scanNextWave((completed, total, message) => {
     renderProgress(completed, total, message, els.scanProgress, els.scanStatus);
-  });
+  }, _scanController.signal);
 
   allMessages.push(...messages);
   showResults(hasMore);
 }
 
 async function runFullScan() {
+  _scanController = new AbortController();
   const progress = getScanProgress();
   const hint = views.scanning.querySelector('.progress-hint');
   if (hint && progress) {
@@ -288,13 +294,14 @@ async function runFullScan() {
 
   const { messages } = await scanFullInbox((completed, total, message) => {
     renderProgress(completed, total, message, els.scanProgress, els.scanStatus);
-  });
+  }, _scanController.signal);
 
   allMessages.push(...messages);
   showResults(false);
 }
 
 function showResults(hasMore) {
+  _isScanning = false;
   renderProgress(0, 0, 'Analysing patterns...', els.scanProgress, els.scanStatus);
   senderGroups = classifyMessages(allMessages);
 
@@ -321,6 +328,13 @@ function showResults(hasMore) {
 }
 
 function handleScanError(err) {
+  _isScanning = false;
+  _scanController = null;
+  if (err.name === 'AbortError') {
+    // User cancelled — go back to connect silently
+    showView('connect');
+    return;
+  }
   if (err instanceof AuthExpiredError) {
     showView('connect');
     showError('Session expired. Please reconnect Gmail.');
@@ -328,6 +342,16 @@ function handleScanError(err) {
     showView('connect');
     showError(err.message || 'Something went wrong during the scan.');
   }
+}
+
+// Cancel scan button
+const btnCancelScan = document.getElementById('btn-cancel-scan');
+if (btnCancelScan) {
+  btnCancelScan.addEventListener('click', () => {
+    if (_scanController) {
+      _scanController.abort();
+    }
+  });
 }
 
 // ── Button handlers ────────────────────────────────────────────
