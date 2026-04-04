@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir -p docs)",
+      "Bash(mv build-prompt.md risk-assessment.md setup-guide.md docs/)"
+    ]
+  }
+}
