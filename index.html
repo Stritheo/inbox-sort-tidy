@@ -11,75 +11,133 @@
       frame-src https://accounts.google.com;
       img-src 'self' data:;">
   <title>Inbox Sort and Tidy</title>
-  <link rel="stylesheet" href="css/pico.min.css">
   <link rel="stylesheet" href="css/app.css">
 </head>
 <body>
   <main class="container">
 
-    <!-- View: Connect -->
+    <!-- ═══ View: Connect ═══ -->
     <section id="view-connect">
       <div class="hero">
-        <h1>Inbox Sort and Tidy</h1>
-        <p>A free tool that scans your Gmail, groups emails by sender, and lets you archive or label them in bulk. No server, no AI, no data stored.</p>
-        <button id="btn-connect" type="button">Connect Gmail</button>
+        <div class="brand">
+          <div class="brand-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="white"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4-8 5-8-5V6l8 5 8-5v2z"/></svg>
+          </div>
+          <h1>Inbox Sort and Tidy</h1>
+        </div>
+        <p class="subtitle">Scan your Gmail, group emails by sender, and archive or label them in bulk. Free, private, and runs entirely in your browser.</p>
+
+        <button id="btn-connect" type="button" class="btn-google">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+          Connect Gmail
+        </button>
       </div>
-      <div class="badges" style="justify-content: center;">
-        <span class="badge">No server</span>
-        <span class="badge">No data stored</span>
-        <span class="badge">No AI</span>
-        <span class="badge">Open source</span>
+
+      <div class="badges">
+        <span class="badge badge--safe">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 1a4.5 4.5 0 00-4.5 4.5V9H5a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2v-6a2 2 0 00-2-2h-.5V5.5A4.5 4.5 0 0010 1zm3 8V5.5a3 3 0 10-6 0V9h6z" clip-rule="evenodd"/></svg>
+          No server
+        </span>
+        <span class="badge badge--safe">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 1a4.5 4.5 0 00-4.5 4.5V9H5a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2v-6a2 2 0 00-2-2h-.5V5.5A4.5 4.5 0 0010 1zm3 8V5.5a3 3 0 10-6 0V9h6z" clip-rule="evenodd"/></svg>
+          No data stored
+        </span>
+        <span class="badge badge--safe">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd"/></svg>
+          No AI
+        </span>
+        <span class="badge badge--open">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 20 20" fill="currentColor"><path d="M12.316 3.051a1 1 0 01.633 1.265l-4 12a1 1 0 11-1.898-.632l4-12a1 1 0 011.265-.633zM5.707 6.293a1 1 0 010 1.414L3.414 10l2.293 2.293a1 1 0 11-1.414 1.414l-3-3a1 1 0 010-1.414l3-3a1 1 0 011.414 0zm8.586 0a1 1 0 011.414 0l3 3a1 1 0 010 1.414l-3 3a1 1 0 11-1.414-1.414L16.586 10l-2.293-2.293a1 1 0 010-1.414z"/></svg>
+          Open source
+        </span>
       </div>
+
       <div id="connect-error" class="error-alert" hidden></div>
+
+      <div class="how-it-works">
+        <h2>How it works</h2>
+        <div class="steps">
+          <div class="step">
+            <div class="step-number">1</div>
+            <h3>Connect</h3>
+            <p>Sign in with Google. We only read email headers, never message bodies.</p>
+          </div>
+          <div class="step">
+            <div class="step-number">2</div>
+            <h3>Review</h3>
+            <p>See your inbox grouped by sender with smart category suggestions.</p>
+          </div>
+          <div class="step">
+            <div class="step-number">3</div>
+            <h3>Tidy</h3>
+            <p>Archive or label in bulk. Undo any time from Gmail's All Mail.</p>
+          </div>
+        </div>
+      </div>
     </section>
 
-    <!-- View: Scanning -->
+    <!-- ═══ View: Scanning ═══ -->
     <section id="view-scanning" hidden>
-      <h2>Scanning your inbox</h2>
-      <p class="progress-label" id="scan-status">Starting scan...</p>
-      <progress id="scan-progress" max="100" value="0"></progress>
-      <p><small>This usually takes under a minute.</small></p>
+      <div class="view-card progress-section">
+        <h2>Scanning your inbox</h2>
+        <p class="progress-label" id="scan-status">Starting scan...</p>
+        <progress id="scan-progress" max="100" value="0"></progress>
+        <p class="progress-hint">This usually takes under a minute.</p>
+      </div>
     </section>
 
-    <!-- View: Results (review sender table) -->
+    <!-- ═══ View: Results (review sender table) ═══ -->
     <section id="view-results" hidden>
-      <div class="connected-banner" id="connected-banner">
-        <span id="connected-email"></span>
-        <button id="btn-disconnect" type="button" class="outline secondary" style="margin:0; padding:0.25rem 0.75rem; font-size:0.85rem;">Disconnect</button>
-      </div>
-      <h2>Review sender categories</h2>
-      <p>We grouped your inbox by sender and suggested a category for each. Change any you disagree with, then preview the changes.</p>
-      <div id="sender-table-container"></div>
-      <div class="button-group">
-        <button id="btn-preview" type="button">Preview Changes</button>
+      <div class="view-card">
+        <div class="connected-banner" id="connected-banner">
+          <span id="connected-email"></span>
+          <button id="btn-disconnect" type="button" class="btn-disconnect">Disconnect</button>
+        </div>
+        <h2>Review sender categories</h2>
+        <p>We grouped your inbox by sender and suggested a category for each. Change any you disagree with, then preview the changes.</p>
+        <div id="sender-table-container"></div>
+        <div class="button-group">
+          <button id="btn-preview" type="button" class="btn-primary">Preview Changes</button>
+        </div>
       </div>
     </section>
 
-    <!-- View: Preview -->
+    <!-- ═══ View: Preview ═══ -->
     <section id="view-preview" hidden>
-      <h2>Preview changes</h2>
-      <p>Here is what will happen when you press Execute.</p>
-      <div id="preview-summary"></div>
-      <div class="button-group">
-        <button id="btn-execute" type="button">Execute</button>
-        <button id="btn-back" type="button" class="outline secondary">Go Back</button>
+      <div class="view-card">
+        <h2>Preview changes</h2>
+        <p>Here is what will happen when you press Execute.</p>
+        <div id="preview-summary"></div>
+        <div class="button-group">
+          <button id="btn-execute" type="button" class="btn-primary btn-execute">Execute</button>
+          <button id="btn-back" type="button" class="btn-secondary">Go Back</button>
+        </div>
       </div>
     </section>
 
-    <!-- View: Executing -->
+    <!-- ═══ View: Executing ═══ -->
     <section id="view-executing" hidden>
-      <h2>Tidying your inbox</h2>
-      <p class="progress-label" id="exec-status">Working...</p>
-      <progress id="exec-progress" max="100" value="0"></progress>
+      <div class="view-card progress-section">
+        <h2>Tidying your inbox</h2>
+        <p class="progress-label" id="exec-status">Working...</p>
+        <progress id="exec-progress" max="100" value="0"></progress>
+      </div>
     </section>
 
-    <!-- View: Done -->
+    <!-- ═══ View: Done ═══ -->
     <section id="view-done" hidden>
-      <h2>All done</h2>
-      <div id="done-results" class="results-stats"></div>
-      <div class="button-group">
-        <button id="btn-scan-again" type="button">Scan Again</button>
-        <button id="btn-done-disconnect" type="button" class="outline secondary">Disconnect</button>
+      <div class="view-card">
+        <div class="done-header">
+          <div class="check-circle">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd"/></svg>
+          </div>
+          <h2>All done</h2>
+        </div>
+        <div id="done-results" class="results-stats"></div>
+        <div class="button-group" style="justify-content: center;">
+          <button id="btn-scan-again" type="button" class="btn-primary">Scan Again</button>
+          <button id="btn-done-disconnect" type="button" class="btn-secondary">Disconnect</button>
+        </div>
       </div>
     </section>
 

@@ -12,7 +12,7 @@ import { executeActions } from './actions.js';
 
 // ── Configuration ──────────────────────────────────────────────
 
-const CLIENT_ID = ''; // Set your Google OAuth Client ID here
+const CLIENT_ID = '607048348334-46cg0kuq362s3opbe1sq47pssfiqccqq.apps.googleusercontent.com';
 
 // ── DOM references ─────────────────────────────────────────────
 
