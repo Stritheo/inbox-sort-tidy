@@ -107,6 +107,8 @@ function clearError() {
 
 document.addEventListener('auth:connected', async () => {
   clearError();
+  const hint = document.getElementById('connect-hint');
+  if (hint) hint.hidden = true;
   try {
     const email = await getProfile();
     els.connectedEmail.textContent = `Connected as ${email}`;
@@ -365,6 +367,8 @@ if (btnCancelScan) {
 
 els.btnConnect.addEventListener('click', () => {
   clearError();
+  const hint = document.getElementById('connect-hint');
+  if (hint) hint.hidden = false;
   requestAuth();
 });
 
