@@ -200,7 +200,7 @@ function showScanChoice(totalCount) {
   container.appendChild(h2);
 
   const p = document.createElement('p');
-  p.textContent = 'Choose how to tackle this:';
+  p.textContent = 'That is a big inbox. Choose how to tackle it.';
   container.appendChild(p);
 
   const btnGroup = document.createElement('div');
@@ -220,7 +220,7 @@ function showScanChoice(totalCount) {
 
   const waveHint = document.createElement('p');
   waveHint.className = 'choice-hint';
-  waveHint.textContent = 'Recommended. Tidy in batches, under a minute each.';
+  waveHint.textContent = 'Recommended. Tidy in batches, under\u00a0a\u00a0minute each.';
   btnGroup.appendChild(waveHint);
 
   // Full option
