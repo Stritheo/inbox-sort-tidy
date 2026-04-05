@@ -5,7 +5,11 @@
       "Bash(mv build-prompt.md risk-assessment.md setup-guide.md docs/)",
       "Bash(GH=/tmp/gh/gh_2.65.0_macOS_arm64/bin/gh)",
       "Bash($GH auth:*)",
-      "Bash($GH issue:*)"
+      "Bash($GH issue:*)",
+      "Bash(lsof -ti:8000)",
+      "Bash(GH=/tmp/gh/gh_2.65.0_macOS_arm64/bin/gh $GH api repos/Stritheo/inbox-sort-tidy -X PATCH -f visibility=public)",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(f''''Visibility: {d.get\\(\"\"visibility\"\"\\)}''''\\)\")",
+      "Bash($GH run:*)"
     ]
   }
 }
