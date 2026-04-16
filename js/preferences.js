@@ -3,20 +3,61 @@
  *
  * Stores only sender-email-to-category mappings. Never stores tokens,
  * email content, subject lines, or metadata.
+ *
+ * Valid category values:
+ *   job_alerts, kids_activities, receipts, newsletters,
+ *   retail_promos, social, notifications, human
  */
 
 const STORAGE_KEY = 'inbox-sort-tidy-prefs';
 
 /**
+ * Migrate old v1 category names to v2.
+ */
+const MIGRATION_MAP = {
+  archive: 'retail_promos',
+  fyi: 'newsletters',
+};
+
+/**
+ * Valid v2 category values.
+ */
+const VALID_CATEGORIES = new Set([
+  'job_alerts', 'kids_activities', 'receipts', 'newsletters',
+  'retail_promos', 'social', 'notifications', 'human',
+]);
+
+/**
  * Load saved preferences from localStorage.
+ * Migrates old v1 category names automatically.
  * @returns {Record<string, string>} email -> category
  */
 export function loadPreferences() {
+  let prefs;
   try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
+    prefs = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
   } catch {
     return {};
   }
+
+  // Migrate old category values
+  let migrated = false;
+  for (const [email, category] of Object.entries(prefs)) {
+    if (MIGRATION_MAP[category]) {
+      prefs[email] = MIGRATION_MAP[category];
+      migrated = true;
+    } else if (!VALID_CATEGORIES.has(category)) {
+      // Remove invalid categories
+      delete prefs[email];
+      migrated = true;
+    }
+  }
+
+  if (migrated) {
+    savePreferences(prefs);
+  }
+
+  return prefs;
 }
 
 /**
@@ -41,7 +82,7 @@ export function clearPreferences() {
  */
 export function applyPreferences(senderGroups, prefs) {
   for (const group of senderGroups) {
-    if (prefs[group.senderEmail]) {
+    if (prefs[group.senderEmail] && VALID_CATEGORIES.has(prefs[group.senderEmail])) {
       group.assignedCategory = prefs[group.senderEmail];
     }
   }

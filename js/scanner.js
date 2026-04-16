@@ -52,6 +52,7 @@ function normaliseMessage(msg) {
     subject: getHeader(msg, 'Subject') || '',
     hasUnsubscribe: getHeader(msg, 'List-Unsubscribe') !== null,
     date: parseInt(msg.internalDate, 10) || 0,
+    sizeEstimate: msg.sizeEstimate || 0,
   };
 }
 

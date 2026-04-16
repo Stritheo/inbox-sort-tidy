@@ -1,0 +1,16 @@
+# Personal working docs
+IMPLEMENTATION-PROMPT.md
+PERSONA-ANALYSIS.md
+
+# Real user data (privacy-sensitive, must never be committed to public repo)
+test/al-sample.json
+test/*-sample.json
+test/*-real.json
+
+# Local Claude Code settings
+.claude/settings.local.json
+
+# OS / editor
+.DS_Store
+*.swp
+*~

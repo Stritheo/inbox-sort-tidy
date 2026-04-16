@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>P0 Unit Tests -- Inbox Sort and Tidy</title>
+  <title>P0 Unit Tests | Inbox Sort and Tidy</title>
   <style>
     body { font-family: system-ui, sans-serif; max-width: 720px; margin: 2rem auto; padding: 0 1rem; }
     h1 { font-size: 1.25rem; }
@@ -18,7 +18,7 @@
   <div id="output"></div>
   <div id="summary"></div>
   <script type="module">
-    import { classifyMessages } from '../js/classifier.js';
+    import { classifyMessages, getActionForCategory } from '../js/classifier.js?v=3';
     import { sanitise, requireAuth } from '../js/security.js';
     import { loadPreferences, savePreferences, clearPreferences, applyPreferences } from '../js/preferences.js';
 
@@ -50,9 +50,10 @@
     assert('UT-CL-001', 'Noreply -> notifications', groups[0].suggestedCategory === 'notifications');
 
     // UT-CL-002: All noreply patterns
-    const noreplyPatterns = ['noreply@x.com','no-reply@x.com','do-not-reply@x.com','donotreply@x.com','notifications@x.com','mailer-daemon@x.com','postmaster@x.com','auto-confirm@x.com','bounce@x.com','automated@x.com'];
+    // x.com is a social domain in v2, so use example.com to test noreply detection in isolation
+    const noreplyPatterns = ['noreply@example.com','no-reply@example.com','do-not-reply@example.com','donotreply@example.com','notifications@example.com','mailer-daemon@example.com','postmaster@example.com','auto-confirm@example.com','bounce@example.com','automated@example.com'];
     noreplyPatterns.forEach((email, i) => {
-      groups = classifyMessages([msg({ senderEmail: email, senderDomain: 'x.com' })]);
+      groups = classifyMessages([msg({ senderEmail: email, senderDomain: 'example.com' })]);
       assert(`UT-CL-002.${i}`, `${email} -> notifications`, groups[0].suggestedCategory === 'notifications');
     });
 
@@ -60,8 +61,8 @@
     groups = classifyMessages([msg({ senderEmail: 'updates@facebookmail.com', senderDomain: 'facebookmail.com' })]);
     assert('UT-CL-003', 'Social domain -> social', groups[0].suggestedCategory === 'social');
 
-    // UT-CL-004: All social domains
-    const socialDomains = ['facebookmail.com','linkedin.com','twitter.com','x.com','instagram.com','tiktok.com','reddit.com','quora.com','medium.com','substack.com','discord.com','slack.com','meetup.com','nextdoor.com','pinterest.com'];
+    // UT-CL-004: All social domains (linkedin.com removed in v2 -- handled via specific senders)
+    const socialDomains = ['facebookmail.com','twitter.com','x.com','instagram.com','tiktok.com','reddit.com','quora.com','medium.com','substack.com','discord.com','slack.com','meetup.com','nextdoor.com','pinterest.com'];
     socialDomains.forEach((domain, i) => {
       groups = classifyMessages([msg({ senderEmail: `info@${domain}`, senderDomain: domain })]);
       assert(`UT-CL-004.${i}`, `${domain} -> social`, groups[0].suggestedCategory === 'social');
@@ -89,13 +90,17 @@
     groups = classifyMessages([msg({ senderEmail: 'john@company.com', senderDomain: 'company.com', subject: 'Hey, lunch?' })]);
     assert('UT-CL-010', 'Normal email -> human', groups[0].suggestedCategory === 'human');
 
-    // UT-CL-011: Priority: noreply beats newsletter
+    // UT-CL-011: Priority: newsletter beats notifications in v2 (List-Unsubscribe is a strong signal)
     groups = classifyMessages([msg({ senderEmail: 'noreply@newsletter.com', senderDomain: 'newsletter.com', hasUnsubscribe: true })]);
-    assert('UT-CL-011', 'Noreply + List-Unsubscribe -> notifications (not newsletters)', groups[0].suggestedCategory === 'notifications');
+    assert('UT-CL-011', 'Noreply + List-Unsubscribe -> newsletters (newsletter beats noreply in v2)', groups[0].suggestedCategory === 'newsletters');
 
-    // UT-CL-012: Priority: social beats newsletter
-    groups = classifyMessages([msg({ senderEmail: 'info@linkedin.com', senderDomain: 'linkedin.com', hasUnsubscribe: true })]);
-    assert('UT-CL-012', 'Social domain + List-Unsubscribe -> social (not newsletters)', groups[0].suggestedCategory === 'social');
+    // UT-CL-012: Social domain detection (without unsubscribe; in v2, newsletters beats social in priority)
+    groups = classifyMessages([msg({ senderEmail: 'updates@facebookmail.com', senderDomain: 'facebookmail.com' })]);
+    assert('UT-CL-012', 'Social domain -> social', groups[0].suggestedCategory === 'social');
+
+    // UT-CL-012b: Social domain WITH unsubscribe -> newsletters in v2 (newsletters is higher priority)
+    groups = classifyMessages([msg({ senderEmail: 'updates@facebookmail.com', senderDomain: 'facebookmail.com', hasUnsubscribe: true })]);
+    assert('UT-CL-012b', 'Social domain + List-Unsubscribe -> newsletters (v2 priority)', groups[0].suggestedCategory === 'newsletters');
 
     // UT-CL-014: Grouping by sender email
     groups = classifyMessages([
@@ -129,9 +134,210 @@
     groups = classifyMessages([]);
     assert('UT-CL-017', 'Empty input -> empty output', groups.length === 0);
 
+    // ── JOB ALERTS TESTS ────────────────────────────────────────
+
+    // UT-JA-001: LinkedIn job sender
+    groups = classifyMessages([msg({ senderEmail: 'jobs-noreply@linkedin.com', senderDomain: 'linkedin.com', subject: '5 new jobs matching Software Engineer' })]);
+    assert('UT-JA-001', 'LinkedIn job sender -> job_alerts', groups[0].suggestedCategory === 'job_alerts');
+
+    // UT-JA-002: SEEK domain
+    groups = classifyMessages([msg({ senderEmail: 'jobalerts@seek.com.au', senderDomain: 'seek.com.au', subject: 'New jobs for you' })]);
+    assert('UT-JA-002', 'SEEK domain -> job_alerts', groups[0].suggestedCategory === 'job_alerts');
+
+    // UT-JA-003: Jora domain
+    groups = classifyMessages([msg({ senderEmail: 'alerts@jora.com', senderDomain: 'jora.com' })]);
+    assert('UT-JA-003', 'Jora domain -> job_alerts', groups[0].suggestedCategory === 'job_alerts');
+
+    // UT-JA-004: jobalerts-noreply LinkedIn sender
+    groups = classifyMessages([msg({ senderEmail: 'jobalerts-noreply@linkedin.com', senderDomain: 'linkedin.com' })]);
+    assert('UT-JA-004', 'jobalerts-noreply@linkedin.com -> job_alerts', groups[0].suggestedCategory === 'job_alerts');
+
+    // UT-JA-005: Job subject pattern with noreply sender
+    groups = classifyMessages([msg({ senderEmail: 'noreply@company.com', senderDomain: 'company.com', subject: 'Company is hiring - apply now' })]);
+    assert('UT-JA-005', 'Noreply + "is hiring" subject -> job_alerts', groups[0].suggestedCategory === 'job_alerts');
+
+    // UT-JA-006: Action mapping for job_alerts
+    groups = classifyMessages([msg({ senderEmail: 'jobs-noreply@linkedin.com', senderDomain: 'linkedin.com' })]);
+    assert('UT-JA-006', 'job_alerts action = label_archive', groups[0].action === 'label_archive');
+    assert('UT-JA-006b', 'job_alerts labelName = Job Alerts', groups[0].labelName === 'Job Alerts');
+
+    // ── LINKEDIN DISAMBIGUATION ────────────────────────────────
+
+    // UT-LD-001: LinkedIn social notification -> social, NOT job_alerts
+    groups = classifyMessages([msg({ senderEmail: 'notifications-noreply@linkedin.com', senderDomain: 'linkedin.com', subject: 'You have 3 new followers' })]);
+    assert('UT-LD-001', 'LinkedIn notifications-noreply -> social', groups[0].suggestedCategory === 'social');
+
+    // UT-LD-002: LinkedIn messages -> social
+    groups = classifyMessages([msg({ senderEmail: 'messages-noreply@linkedin.com', senderDomain: 'linkedin.com' })]);
+    assert('UT-LD-002', 'LinkedIn messages-noreply -> social', groups[0].suggestedCategory === 'social');
+
+    // UT-LD-003: LinkedIn invitations -> social
+    groups = classifyMessages([msg({ senderEmail: 'invitations-noreply@linkedin.com', senderDomain: 'linkedin.com' })]);
+    assert('UT-LD-003', 'LinkedIn invitations-noreply -> social', groups[0].suggestedCategory === 'social');
+
+    // UT-LD-004: job_alerts runs before social in priority
+    groups = classifyMessages([
+      msg({ id: '1', senderEmail: 'jobs-noreply@linkedin.com', senderDomain: 'linkedin.com', subject: '10 new jobs' }),
+      msg({ id: '2', senderEmail: 'notifications-noreply@linkedin.com', senderDomain: 'linkedin.com', subject: 'You have a new follower' }),
+    ]);
+    const jobGroup = groups.find(g => g.senderEmail === 'jobs-noreply@linkedin.com');
+    const socialGroup = groups.find(g => g.senderEmail === 'notifications-noreply@linkedin.com');
+    assert('UT-LD-004', 'Jobs sender = job_alerts, social sender = social (separate groups)', jobGroup.suggestedCategory === 'job_alerts' && socialGroup.suggestedCategory === 'social');
+
+    // ── KIDS & ACTIVITIES TESTS ────────────────────────────────
+
+    // UT-KA-001: Sentral domain
+    groups = classifyMessages([msg({ senderEmail: 'noreply@sentral.com.au', senderDomain: 'sentral.com.au' })]);
+    assert('UT-KA-001', 'sentral.com.au -> kids_activities', groups[0].suggestedCategory === 'kids_activities');
+
+    // UT-KA-002: Compass education domain
+    groups = classifyMessages([msg({ senderEmail: 'no-reply@compassedu.com.au', senderDomain: 'compassedu.com.au' })]);
+    assert('UT-KA-002', 'compassedu.com.au -> kids_activities', groups[0].suggestedCategory === 'kids_activities');
+
+    // UT-KA-003: Operoo domain
+    groups = classifyMessages([msg({ senderEmail: 'noreply@operoo.com', senderDomain: 'operoo.com' })]);
+    assert('UT-KA-003', 'operoo.com -> kids_activities', groups[0].suggestedCategory === 'kids_activities');
+
+    // UT-KA-004: Sender name with "school"
+    groups = classifyMessages([msg({ senderEmail: 'info@westview.edu.au', senderDomain: 'westview.edu.au', sender: 'Westview Primary School' })]);
+    assert('UT-KA-004', 'Sender name "...School" -> kids_activities', groups[0].suggestedCategory === 'kids_activities');
+
+    // UT-KA-005: Sender name with sport
+    groups = classifyMessages([msg({ senderEmail: 'info@club.com', senderDomain: 'club.com', sender: 'North Ryde Swimming Club' })]);
+    assert('UT-KA-005', 'Sender "...Swimming Club" -> kids_activities', groups[0].suggestedCategory === 'kids_activities');
+
+    // UT-KA-006: Subject with "Term 2" pattern
+    groups = classifyMessages([msg({ senderEmail: 'admin@randoschool.com', senderDomain: 'randoschool.com', subject: 'Term 2 Excursion Permission' })]);
+    assert('UT-KA-006', 'Subject "Term 2 Excursion..." -> kids_activities', groups[0].suggestedCategory === 'kids_activities');
+
+    // UT-KA-007: kids_activities beats noreply (priority 2 > 7)
+    groups = classifyMessages([msg({ senderEmail: 'noreply@sentral.com.au', senderDomain: 'sentral.com.au' })]);
+    assert('UT-KA-007', 'Kids domain with noreply sender -> kids_activities (not notifications)', groups[0].suggestedCategory === 'kids_activities');
+
+    // UT-KA-008: Action mapping for kids_activities
+    groups = classifyMessages([msg({ senderEmail: 'noreply@sentral.com.au', senderDomain: 'sentral.com.au' })]);
+    assert('UT-KA-008', 'kids_activities action = label_keep', groups[0].action === 'label_keep');
+    assert('UT-KA-008b', 'kids_activities labelName = Kids & Activities', groups[0].labelName === 'Kids & Activities');
+
+    // ── RETAIL PROMOS TESTS ────────────────────────────────────
+
+    // UT-RP-001: AU retail domain (Kmart)
+    groups = classifyMessages([msg({ senderEmail: 'promo@e.kmart.com.au', senderDomain: 'e.kmart.com.au' })]);
+    assert('UT-RP-001', 'e.kmart.com.au -> retail_promos', groups[0].suggestedCategory === 'retail_promos');
+
+    // UT-RP-002: AU retail domain (BigW)
+    groups = classifyMessages([msg({ senderEmail: 'offers@e.bigw.com.au', senderDomain: 'e.bigw.com.au' })]);
+    assert('UT-RP-002', 'e.bigw.com.au -> retail_promos', groups[0].suggestedCategory === 'retail_promos');
+
+    // UT-RP-003: AU retail domain (Coles)
+    groups = classifyMessages([msg({ senderEmail: 'shop@e.coles.com.au', senderDomain: 'e.coles.com.au' })]);
+    assert('UT-RP-003', 'e.coles.com.au -> retail_promos', groups[0].suggestedCategory === 'retail_promos');
+
+    // UT-RP-004: marketing@ sender with sale subject
+    groups = classifyMessages([msg({ senderEmail: 'marketing@store.com', senderDomain: 'store.com', subject: 'Flash sale: 50% off everything' })]);
+    assert('UT-RP-004', 'marketing@ + "Flash sale" subject -> retail_promos', groups[0].suggestedCategory === 'retail_promos');
+
+    // UT-RP-005: Action mapping for retail_promos
+    groups = classifyMessages([msg({ senderEmail: 'promo@e.kmart.com.au', senderDomain: 'e.kmart.com.au' })]);
+    assert('UT-RP-005', 'retail_promos action = archive', groups[0].action === 'archive');
+    assert('UT-RP-005b', 'retail_promos labelName = null', groups[0].labelName === null);
+
+    // ── FOOD NEWSLETTER SUBLABEL TEST ──────────────────────────
+
+    // UT-FN-001: Food newsletter gets Recipes sublabel
+    groups = classifyMessages([msg({ senderEmail: 'news@taste.com.au', senderDomain: 'taste.com.au', hasUnsubscribe: true })]);
+    assert('UT-FN-001', 'taste.com.au + unsubscribe -> newsletters with Recipes sublabel', groups[0].suggestedCategory === 'newsletters' && groups[0].sublabel === 'Recipes');
+
+    // UT-FN-002: Sublabel overrides labelName
+    assert('UT-FN-002', 'Food newsletter labelName = Recipes (not Newsletters)', groups[0].labelName === 'Recipes');
+
+    // ── ACTION MAP TESTS ───────────────────────────────────────
+
+    // UT-AM-001: getActionForCategory
+    assert('UT-AM-001', 'getActionForCategory(job_alerts).action = label_archive', getActionForCategory('job_alerts').action === 'label_archive');
+    assert('UT-AM-002', 'getActionForCategory(kids_activities).action = label_keep', getActionForCategory('kids_activities').action === 'label_keep');
+    assert('UT-AM-003', 'getActionForCategory(human).action = keep', getActionForCategory('human').action === 'keep');
+    assert('UT-AM-004', 'getActionForCategory(unknown) falls back to human', getActionForCategory('bogus').action === 'keep');
+
+    // ── CRITICAL SAFETY (priority 0) ───────────────────────────
+
+    // UT-CS-001: Google security alert -> human (never archived)
+    groups = classifyMessages([msg({ senderEmail: 'no-reply@accounts.google.com', senderDomain: 'accounts.google.com', subject: 'Security alert for user@gmail.com' })]);
+    assert('UT-CS-001', 'Google security alert -> human', groups[0].suggestedCategory === 'human');
+
+    // UT-CS-002: Verification code subject -> human
+    groups = classifyMessages([msg({ senderEmail: 'noreply@somesite.com', senderDomain: 'somesite.com', subject: 'Your verification code is 123456' })]);
+    assert('UT-CS-002', 'Verification code subject -> human', groups[0].suggestedCategory === 'human');
+
+    // UT-CS-003: "Password reset" subject -> human even from noreply
+    groups = classifyMessages([msg({ senderEmail: 'noreply@bank.com', senderDomain: 'bank.com', subject: 'Password reset requested' })]);
+    assert('UT-CS-003', 'Password reset subject -> human', groups[0].suggestedCategory === 'human');
+
+    // UT-CS-004: "New sign-in" subject -> human
+    groups = classifyMessages([msg({ senderEmail: 'noreply@service.com', senderDomain: 'service.com', subject: 'New sign-in from Chrome on Mac' })]);
+    assert('UT-CS-004', 'New sign-in subject -> human', groups[0].suggestedCategory === 'human');
+
+    // UT-CS-005: Suspicious activity -> human
+    groups = classifyMessages([msg({ senderEmail: 'noreply@bank.com', senderDomain: 'bank.com', subject: 'Suspicious login detected' })]);
+    assert('UT-CS-005', 'Suspicious login subject -> human', groups[0].suggestedCategory === 'human');
+
+    // ── AU SCHOOL DOMAIN SUFFIX ────────────────────────────────
+
+    // UT-SD-001: .nsw.edu.au suffix -> kids_activities
+    groups = classifyMessages([msg({ senderEmail: 'admin@knox.nsw.edu.au', senderDomain: 'knox.nsw.edu.au' })]);
+    assert('UT-SD-001', 'knox.nsw.edu.au -> kids_activities', groups[0].suggestedCategory === 'kids_activities');
+
+    // UT-SD-002: Ravenswood school domain
+    groups = classifyMessages([msg({ senderEmail: 'teacher@ravenswood.nsw.edu.au', senderDomain: 'ravenswood.nsw.edu.au' })]);
+    assert('UT-SD-002', 'ravenswood.nsw.edu.au -> kids_activities', groups[0].suggestedCategory === 'kids_activities');
+
+    // UT-SD-003: Generic .vic.edu.au suffix
+    groups = classifyMessages([msg({ senderEmail: 'info@somewhere.vic.edu.au', senderDomain: 'somewhere.vic.edu.au' })]);
+    assert('UT-SD-003', '.vic.edu.au suffix -> kids_activities', groups[0].suggestedCategory === 'kids_activities');
+
+    // UT-SD-004: Scouts NSW domain
+    groups = classifyMessages([msg({ senderEmail: 'communications@nsw.scouts.com.au', senderDomain: 'nsw.scouts.com.au' })]);
+    assert('UT-SD-004', 'nsw.scouts.com.au -> kids_activities', groups[0].suggestedCategory === 'kids_activities');
+
+    // UT-SD-005: Non-school domain with .com should NOT be kids_activities
+    groups = classifyMessages([msg({ senderEmail: 'hello@regular.com', senderDomain: 'regular.com' })]);
+    assert('UT-SD-005', 'Non-school domain -> human (not kids_activities)', groups[0].suggestedCategory === 'human');
+
+    // ── LINKEDIN SOCIAL EXPANSION ──────────────────────────────
+
+    // UT-LD-005: updates-noreply@linkedin.com -> social (regression test)
+    groups = classifyMessages([msg({ senderEmail: 'updates-noreply@linkedin.com', senderDomain: 'linkedin.com', subject: 'Geoff shared a post' })]);
+    assert('UT-LD-005', 'updates-noreply@linkedin.com -> social', groups[0].suggestedCategory === 'social');
+
+    // UT-LD-006: news-noreply@linkedin.com -> social
+    groups = classifyMessages([msg({ senderEmail: 'news-noreply@linkedin.com', senderDomain: 'linkedin.com' })]);
+    assert('UT-LD-006', 'news-noreply@linkedin.com -> social', groups[0].suggestedCategory === 'social');
+
+    // ── SHIPPING RECEIPT PATTERNS ──────────────────────────────
+
+    // UT-SR-001: "Despatched" subject -> receipts
+    groups = classifyMessages([msg({ senderEmail: 'noreply@courier.com.au', senderDomain: 'courier.com.au', subject: 'Your order has been Despatched' })]);
+    assert('UT-SR-001', 'Despatched subject -> receipts', groups[0].suggestedCategory === 'receipts');
+
+    // UT-SR-002: "has shipped" subject -> receipts
+    groups = classifyMessages([msg({ senderEmail: 'noreply@store.com', senderDomain: 'store.com', subject: 'Your order has shipped' })]);
+    assert('UT-SR-002', 'has shipped subject -> receipts', groups[0].suggestedCategory === 'receipts');
+
+    // UT-SR-003: "we have delivered" subject -> receipts
+    groups = classifyMessages([msg({ senderEmail: 'noreply@courier.com.au', senderDomain: 'courier.com.au', subject: 'We have delivered your parcel' })]);
+    assert('UT-SR-003', 'We have delivered -> receipts', groups[0].suggestedCategory === 'receipts');
+
+    // UT-SR-004: "order #123" subject -> receipts
+    groups = classifyMessages([msg({ senderEmail: 'orders@shop.com', senderDomain: 'shop.com', subject: 'Shop Order #7G3EAHL3RT has Shipped' })]);
+    assert('UT-SR-004', 'order # subject -> receipts', groups[0].suggestedCategory === 'receipts');
+
+    // UT-SR-005: tracking number subject -> receipts
+    groups = classifyMessages([msg({ senderEmail: 'ship@couriersplease.com.au', senderDomain: 'couriersplease.com.au', subject: 'Your tracking number is 12345' })]);
+    assert('UT-SR-005', 'tracking number subject -> receipts', groups[0].suggestedCategory === 'receipts');
+
     // ── SECURITY TESTS ─────────────────────────────────────────
 
-    assert('UT-SE-001', 'Sanitise script tag', sanitise('<script>alert(1)</script>') === '&lt;script&gt;alert(1)&lt;/script&gt;');
+    assert('UT-SE-001', 'Sanitise script tag', sanitise('<scr' + 'ipt>alert(1)<\/scr' + 'ipt>') === '&lt;scr' + 'ipt&gt;alert(1)&lt;/scr' + 'ipt&gt;');
     assert('UT-SE-002', 'Sanitise img onerror', sanitise('<img onerror="alert(1)">').includes('&lt;') && sanitise('<img onerror="alert(1)">').includes('&quot;'));
     assert('UT-SE-003', 'Sanitise ampersand', sanitise('Tom & Jerry') === 'Tom &amp; Jerry');
     assert('UT-SE-004', 'Sanitise quotes', sanitise('"it\'s"') === '&quot;it&#39;s&quot;');
@@ -152,8 +358,8 @@
     clearPreferences();
     assert('UT-PR-002', 'Load empty prefs', Object.keys(loadPreferences()).length === 0);
 
-    savePreferences({ 'a@b.com': 'archive' });
-    assert('UT-PR-001', 'Save and load round-trip', loadPreferences()['a@b.com'] === 'archive');
+    savePreferences({ 'a@b.com': 'newsletters' });
+    assert('UT-PR-001', 'Save and load round-trip', loadPreferences()['a@b.com'] === 'newsletters');
 
     clearPreferences();
     assert('UT-PR-004', 'Clear prefs', Object.keys(loadPreferences()).length === 0);
@@ -165,25 +371,34 @@
 
     // applyPreferences
     const testGroups = [{ senderEmail: 'a@b.com', suggestedCategory: 'human', assignedCategory: null, messages: [] }];
-    applyPreferences(testGroups, { 'a@b.com': 'archive' });
-    assert('UT-PR-005', 'applyPreferences overrides', testGroups[0].assignedCategory === 'archive');
+    applyPreferences(testGroups, { 'a@b.com': 'newsletters' });
+    assert('UT-PR-005', 'applyPreferences overrides', testGroups[0].assignedCategory === 'newsletters');
+
+    // UT-PR-006: v1 -> v2 migration (archive -> retail_promos)
+    clearPreferences();
+    savePreferences({ 'old@v1.com': 'archive', 'also@v1.com': 'fyi' });
+    const migrated = loadPreferences();
+    assert('UT-PR-006', 'v1 "archive" migrates to "retail_promos"', migrated['old@v1.com'] === 'retail_promos');
+    assert('UT-PR-006b', 'v1 "fyi" migrates to "newsletters"', migrated['also@v1.com'] === 'newsletters');
+    clearPreferences();
 
     // ── NO-INNERHTML CHECK ─────────────────────────────────────
 
-    // Check ui.js source for innerHTML
+    // Check ui.js source for innerHTML usage (exclude comments)
     const uiResponse = await fetch('../js/ui.js');
     const uiSource = await uiResponse.text();
-    assert('SEC-007', 'No innerHTML in ui.js', !uiSource.includes('innerHTML'));
+    const stripComments = (src) => src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*/g, '');
+    assert('SEC-007', 'No innerHTML in ui.js (excluding comments)', !stripComments(uiSource).includes('innerHTML'));
 
-    // Check all JS files
+    // Check all JS files (excluding comments)
     const jsFiles = ['app.js','auth.js','gmail.js','scanner.js','classifier.js','ui.js','actions.js','preferences.js','security.js'];
     let innerHtmlFound = false;
     for (const file of jsFiles) {
       const res = await fetch(`../js/${file}`);
       const src = await res.text();
-      if (src.includes('innerHTML')) { innerHtmlFound = true; break; }
+      if (stripComments(src).includes('innerHTML')) { innerHtmlFound = true; break; }
     }
-    assert('SEC-007b', 'No innerHTML in any JS file', !innerHtmlFound);
+    assert('SEC-007b', 'No innerHTML in any JS file (excluding comments)', !innerHtmlFound);
 
     // ── SUMMARY ────────────────────────────────────────────────
 

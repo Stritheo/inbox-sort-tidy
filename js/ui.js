@@ -5,30 +5,59 @@
  * Never use innerHTML with any data from email headers.
  */
 
-// ── Category options ───────────────────────────────────────────
+import { getActionForCategory } from './classifier.js';
+
+// ── Category options for dropdown ─────────────────────────────
 
 const CATEGORY_OPTIONS = [
-  { value: 'human', label: 'Keep in Inbox' },
-  { value: 'archive', label: 'Archive All' },
-  { value: 'newsletters', label: 'Label: Newsletters' },
-  { value: 'receipts', label: 'Label: Receipts' },
-  { value: 'fyi', label: 'Label: FYI' },
+  { value: 'human',           label: 'Keep in Inbox' },
+  { value: 'job_alerts',      label: 'Label: Job Alerts' },
+  { value: 'kids_activities', label: 'Label: Kids & Activities (keep visible)' },
+  { value: 'receipts',        label: 'Label: Receipts' },
+  { value: 'newsletters',     label: 'Label: Newsletters' },
+  { value: 'retail_promos',   label: 'Archive' },
+  { value: 'social',          label: 'Archive' },
+  { value: 'notifications',   label: 'Archive' },
 ];
 
 /**
- * Map classifier categories to the UI dropdown value.
- * 'notifications' and 'social' both map to 'archive'.
+ * Short display labels for category tags in the sender table.
  */
-function effectiveCategory(group) {
-  const cat = group.assignedCategory || group.suggestedCategory;
-  if (cat === 'notifications' || cat === 'social') return 'archive';
-  return cat;
-}
-
-// ── Sender table ───────────────────────────────────────────────
+const CATEGORY_TAGS = {
+  job_alerts:      'Job Alerts',
+  kids_activities: 'Kids',
+  receipts:        'Receipts',
+  newsletters:     'Newsletters',
+  retail_promos:   'Retail',
+  social:          'Social',
+  notifications:   'Notifications',
+  human:           'Human',
+};
 
 /**
- * Render the sender frequency table with category dropdowns.
+ * Descriptions for the results breakdown screen.
+ */
+const CATEGORY_RESULT_TEXT = {
+  job_alerts:      { verb: 'labelled and archived', noun: 'job alerts' },
+  kids_activities: { verb: 'labelled', noun: 'kids and activities emails' },
+  receipts:        { verb: 'labelled and archived', noun: 'receipts' },
+  newsletters:     { verb: 'labelled and archived', noun: 'newsletters' },
+  retail_promos:   { verb: 'archived', noun: 'retail promotions' },
+  social:          { verb: 'archived', noun: 'social notifications' },
+  notifications:   { verb: 'archived', noun: 'platform notifications' },
+  human:           { verb: 'kept in inbox', noun: 'emails' },
+};
+
+// ── Effective category ────────────────────────────────────────
+
+function effectiveCategory(group) {
+  return group.assignedCategory || group.suggestedCategory;
+}
+
+// ── Sender table ──────────────────────────────────────────────
+
+/**
+ * Render the sender frequency table with category dropdowns and colour tags.
  * @param {object[]} senderGroups
  * @param {HTMLElement} container
  */
@@ -60,11 +89,21 @@ export function renderSenderTable(senderGroups, container) {
     countCell.textContent = group.messages.length;
 
     const senderCell = document.createElement('td');
-    senderCell.textContent = group.senderName || group.senderEmail;
-    senderCell.title = group.senderEmail; // tooltip shows full email
+    // Sender name with category tag
+    const senderText = document.createElement('span');
+    senderText.textContent = group.senderName || group.senderEmail;
+    senderCell.appendChild(senderText);
+    senderCell.title = group.senderEmail;
+
+    // Category colour tag
+    const cat = effectiveCategory(group);
+    const tag = document.createElement('span');
+    tag.classList.add('cat-tag', `cat-tag--${cat}`);
+    tag.textContent = CATEGORY_TAGS[cat] || cat;
+    senderCell.appendChild(tag);
 
     const categoryCell = document.createElement('td');
-    categoryCell.appendChild(createCategorySelect(group));
+    categoryCell.appendChild(createCategorySelect(group, tag));
 
     row.append(countCell, senderCell, categoryCell);
     tbody.appendChild(row);
@@ -76,9 +115,10 @@ export function renderSenderTable(senderGroups, container) {
 /**
  * Create a <select> for a sender group's category.
  * @param {object} group
+ * @param {HTMLElement} tag -- the category tag element to update on change
  * @returns {HTMLSelectElement}
  */
-function createCategorySelect(group) {
+function createCategorySelect(group, tag) {
   const select = document.createElement('select');
   select.setAttribute('aria-label', `Category for ${group.senderEmail}`);
 
@@ -94,12 +134,15 @@ function createCategorySelect(group) {
 
   select.addEventListener('change', () => {
     group.assignedCategory = select.value;
+    // Update the tag
+    tag.className = `cat-tag cat-tag--${select.value}`;
+    tag.textContent = CATEGORY_TAGS[select.value] || select.value;
   });
 
   return select;
 }
 
-// ── Progress ───────────────────────────────────────────────────
+// ── Progress ──────────────────────────────────────────────────
 
 /**
  * Update a progress bar and its label.
@@ -119,47 +162,60 @@ export function renderProgress(current, total, message, progressEl, labelEl) {
   labelEl.textContent = message;
 }
 
-// ── Preview summary ────────────────────────────────────────────
+// ── Preview summary ───────────────────────────────────────────
 
 /**
  * Calculate and render the dry-run preview.
  * @param {object[]} senderGroups
  * @param {HTMLElement} container
- * @returns {object} counts by action
+ * @returns {object} counts by action type
  */
 export function renderPreview(senderGroups, container) {
-  const counts = { archive: 0, newsletters: 0, receipts: 0, fyi: 0, keep: 0 };
+  const counts = {
+    archive: 0, label_archive: 0, label_keep: 0, keep: 0,
+  };
+  const labelCounts = {};
 
   for (const group of senderGroups) {
     const cat = effectiveCategory(group);
+    const mapping = getActionForCategory(cat);
     const n = group.messages.length;
-    if (cat === 'archive') counts.archive += n;
-    else if (cat === 'newsletters') counts.newsletters += n;
-    else if (cat === 'receipts') counts.receipts += n;
-    else if (cat === 'fyi') counts.fyi += n;
+
+    if (mapping.action === 'archive') counts.archive += n;
+    else if (mapping.action === 'label_archive') {
+      counts.label_archive += n;
+      const lbl = group.sublabel || mapping.labelName;
+      labelCounts[lbl] = (labelCounts[lbl] || 0) + n;
+    }
+    else if (mapping.action === 'label_keep') {
+      counts.label_keep += n;
+      const lbl = mapping.labelName;
+      labelCounts[lbl] = (labelCounts[lbl] || 0) + n;
+    }
     else counts.keep += n;
   }
 
   container.replaceChildren();
 
-  // Total as headline
-  const total = counts.archive + counts.newsletters + counts.receipts + counts.fyi + counts.keep;
+  const total = counts.archive + counts.label_archive + counts.label_keep + counts.keep;
   const headline = document.createElement('p');
   headline.classList.add('preview-headline');
   headline.textContent = `${total.toLocaleString()} emails`;
   container.appendChild(headline);
 
-  // Plan as a clean list
   const list = document.createElement('ul');
   list.classList.add('preview-plan');
 
   const items = [
     { count: counts.archive, text: 'archived' },
-    { count: counts.newsletters, text: 'labelled Newsletters' },
-    { count: counts.receipts, text: 'labelled Receipts' },
-    { count: counts.fyi, text: 'labelled FYI' },
-    { count: counts.keep, text: 'staying in your inbox' },
   ];
+
+  // Add per-label items
+  for (const [label, count] of Object.entries(labelCounts)) {
+    items.push({ count, text: `labelled ${label}` });
+  }
+
+  items.push({ count: counts.keep + counts.label_keep, text: 'staying in your inbox' });
 
   for (const item of items) {
     if (item.count === 0) continue;
@@ -175,21 +231,126 @@ export function renderPreview(senderGroups, container) {
   return counts;
 }
 
-// ── Done results ───────────────────────────────────────────────
+// ── Before/After Results ──────────────────────────────────────
 
 /**
- * Render the final results summary.
- * @param {object} stats -- { archived, newsletters, receipts, fyi, kept }
+ * Animate a number counting down from `from` to `to`.
+ * @param {HTMLElement} element
+ * @param {number} from
+ * @param {number} to
+ * @param {number} duration -- milliseconds
+ */
+function animateCount(element, from, to, duration) {
+  const start = performance.now();
+  const diff = from - to;
+
+  function update(now) {
+    const elapsed = now - start;
+    const progress = Math.min(elapsed / duration, 1);
+    // Ease-out cubic
+    const eased = 1 - Math.pow(1 - progress, 3);
+    const current = Math.round(from - (diff * eased));
+    element.textContent = current.toLocaleString();
+    if (progress < 1) requestAnimationFrame(update);
+  }
+
+  requestAnimationFrame(update);
+}
+
+/**
+ * Format bytes into a human-readable string.
+ * @param {number} bytes
+ * @returns {string}
+ */
+function formatBytes(bytes) {
+  if (bytes < 1024) return `${bytes} bytes`;
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
+}
+
+/**
+ * Render the before/after results screen.
+ * @param {object} results -- from executeActions()
+ * @param {object} containers -- { before, after, breakdown, storage }
+ */
+export function renderBeforeAfter(results, containers) {
+  // Before count
+  const beforeEl = containers.before;
+  if (beforeEl) {
+    beforeEl.textContent = results.totalScanned.toLocaleString();
+  }
+
+  // After count with animation
+  const afterEl = containers.after;
+  if (afterEl) {
+    // Reduced motion check
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (prefersReducedMotion) {
+      afterEl.textContent = results.remaining.toLocaleString();
+    } else {
+      animateCount(afterEl, results.totalScanned, results.remaining, 1500);
+    }
+  }
+
+  // Breakdown list
+  const breakdownEl = containers.breakdown;
+  if (breakdownEl) {
+    breakdownEl.replaceChildren();
+    const list = document.createElement('ul');
+    list.classList.add('results-breakdown-list');
+
+    for (const [category, data] of Object.entries(results.breakdown)) {
+      if (data.count === 0) continue;
+      const meta = CATEGORY_RESULT_TEXT[category];
+      if (!meta) continue;
+
+      const li = document.createElement('li');
+      li.classList.add(`cat-result--${category}`);
+      const num = document.createElement('strong');
+      num.textContent = data.count.toLocaleString();
+      li.appendChild(num);
+      li.appendChild(document.createTextNode(` ${meta.noun} ${meta.verb}`));
+      list.appendChild(li);
+    }
+
+    breakdownEl.appendChild(list);
+  }
+
+  // Storage freed
+  const storageEl = containers.storage;
+  if (storageEl) {
+    if (results.storageFreed > 0) {
+      storageEl.textContent = `Approximately ${formatBytes(results.storageFreed)} freed`;
+      storageEl.hidden = false;
+    } else {
+      storageEl.hidden = true;
+    }
+  }
+}
+
+// ── Legacy renderResults (simple text fallback) ───────────────
+
+/**
+ * Render a simple text results summary (used when before/after containers
+ * are not available, e.g. empty inbox).
+ * @param {object} stats
  * @param {HTMLElement} container
  */
 export function renderResults(stats, container) {
   container.replaceChildren();
 
+  if (stats.totalScanned !== undefined) {
+    // New v2 results format
+    const p = document.createElement('p');
+    p.textContent = `Processed ${stats.totalScanned} emails. ${stats.remaining} remain in your inbox.`;
+    container.appendChild(p);
+    return;
+  }
+
+  // Fallback for simple stats
   const lines = [];
   if (stats.archived > 0) lines.push(`Archived ${stats.archived} emails.`);
-  if (stats.newsletters > 0) lines.push(`Labelled ${stats.newsletters} as Newsletters.`);
-  if (stats.receipts > 0) lines.push(`Labelled ${stats.receipts} as Receipts.`);
-  if (stats.fyi > 0) lines.push(`Labelled ${stats.fyi} as FYI.`);
   if (stats.kept > 0) lines.push(`Kept ${stats.kept} in Inbox.`);
 
   for (const line of lines) {

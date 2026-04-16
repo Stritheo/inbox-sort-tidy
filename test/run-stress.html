@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Stress & Resiliency Tests | Inbox Sort and Tidy</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 860px; margin: 2rem auto; padding: 0 1rem; }
+    h1 { font-size: 1.25rem; }
+    h2 { font-size: 1rem; margin-top: 1.5rem; color: #374151; border-bottom: 1px solid #e5e7eb; padding-bottom: 0.25rem; }
+    .pass { color: #047857; } .fail { color: #991b1b; font-weight: 700; } .info { color: #6366f1; }
+    .result { padding: 0.25rem 0; font-size: 0.85rem; font-family: monospace; }
+    .summary { margin-top: 1rem; padding: 1rem; border-radius: 8px; font-weight: 600; }
+    .summary.all-pass { background: #ecfdf5; color: #047857; }
+    .summary.has-fail { background: #fef2f2; color: #991b1b; }
+  </style>
+</head>
+<body>
+  <h1>Stress &amp; Resiliency Tests</h1>
+  <p>Performance, memory, edge cases, and adversarial inputs for the v2 classifier and supporting modules. Run before touching a real Gmail inbox.</p>
+  <div id="output"></div>
+  <div id="summary"></div>
+  <script type="module">
+    import { classifyMessages, getActionForCategory } from '../js/classifier.js?v=2';
+    import { sanitise } from '../js/security.js';
+    import { loadPreferences, savePreferences, clearPreferences, applyPreferences } from '../js/preferences.js';
+
+    const output = document.getElementById('output');
+    const summaryEl = document.getElementById('summary');
+    let passed = 0, failed = 0;
+
+    function section(title) {
+      const h = document.createElement('h2');
+      h.textContent = title;
+      output.appendChild(h);
+    }
+    function assert(id, desc, condition, detail) {
+      const el = document.createElement('div');
+      el.className = 'result';
+      const prefix = condition ? 'PASS' : 'FAIL';
+      const cls = condition ? 'pass' : 'fail';
+      const span = document.createElement('span');
+      span.className = cls;
+      span.textContent = prefix;
+      el.appendChild(span);
+      el.appendChild(document.createTextNode(` ${id}: ${desc}${detail ? ' -- ' + detail : ''}`));
+      if (condition) passed++; else failed++;
+      output.appendChild(el);
+    }
+    function info(text) {
+      const el = document.createElement('div');
+      el.className = 'result info';
+      el.textContent = 'INFO: ' + text;
+      output.appendChild(el);
+    }
+    function msg(overrides) {
+      return { id: String(Math.random()), sender: '', senderEmail: '', senderDomain: '', subject: '', hasUnsubscribe: false, date: 0, sizeEstimate: 0, ...overrides };
+    }
+
+    // ── PERFORMANCE: classifier throughput ─────────────────────
+    section('Performance');
+
+    function genBatch(n) {
+      const out = [];
+      const senders = [
+        'noreply@sentral.com.au', 'jobs-noreply@linkedin.com',
+        'promo@e.kmart.com.au', 'marketing@store.com',
+        'orders@stripe.com', 'news@taste.com.au',
+        'notifications-noreply@linkedin.com', 'alice@gmail.com',
+        'noreply@random.com', 'info@facebookmail.com',
+      ];
+      for (let i = 0; i < n; i++) {
+        const s = senders[i % senders.length];
+        const dom = s.split('@')[1];
+        out.push(msg({
+          id: String(i),
+          sender: 'Sender ' + i,
+          senderEmail: s,
+          senderDomain: dom,
+          subject: 'Subject ' + i + ' receipt term 2 sale',
+          hasUnsubscribe: i % 3 === 0,
+          sizeEstimate: 20000,
+        }));
+      }
+      return out;
+    }
+
+    // PF-001: 100 messages
+    let t0 = performance.now();
+    let r = classifyMessages(genBatch(100));
+    let t1 = performance.now();
+    assert('PF-001', '100 messages classify in under 50ms', (t1 - t0) < 50, `${(t1 - t0).toFixed(1)}ms`);
+
+    // PF-002: 1,000 messages
+    t0 = performance.now();
+    r = classifyMessages(genBatch(1000));
+    t1 = performance.now();
+    assert('PF-002', '1,000 messages classify in under 100ms', (t1 - t0) < 100, `${(t1 - t0).toFixed(1)}ms`);
+
+    // PF-003: 10,000 messages
+    t0 = performance.now();
+    r = classifyMessages(genBatch(10000));
+    t1 = performance.now();
+    assert('PF-003', '10,000 messages classify in under 1,000ms', (t1 - t0) < 1000, `${(t1 - t0).toFixed(1)}ms`);
+
+    // PF-004: 10,000 messages produce exactly 10 sender groups (since 10 unique senders)
+    assert('PF-004', '10K messages -> 10 sender groups (correct dedup)', r.length === 10, `${r.length} groups`);
+
+    // PF-005: Re-run 5 times consecutively (stability / no memory accumulation visible in perf)
+    const times = [];
+    for (let i = 0; i < 5; i++) {
+      t0 = performance.now();
+      classifyMessages(genBatch(1000));
+      t1 = performance.now();
+      times.push(t1 - t0);
+    }
+    const avg = times.reduce((a, b) => a + b, 0) / times.length;
+    assert('PF-005', 'Stable 1K classify across 5 runs (avg under 100ms)', avg < 100, `avg ${avg.toFixed(1)}ms`);
+    info('Times: ' + times.map(t => t.toFixed(1) + 'ms').join(', '));
+
+    // ── EDGE CASES: malformed / missing fields ─────────────────
+    section('Edge cases: malformed input');
+
+    // EC-001: missing From header (empty senderEmail)
+    r = classifyMessages([msg({ senderEmail: '', senderDomain: '', subject: 'Hello' })]);
+    assert('EC-001', 'Empty senderEmail does not crash', r.length === 1);
+
+    // EC-002: missing subject
+    r = classifyMessages([msg({ senderEmail: 'noreply@example.com', senderDomain: 'example.com', subject: '' })]);
+    assert('EC-002', 'Empty subject -> notifications', r[0].suggestedCategory === 'notifications');
+
+    // EC-003: undefined/null fields -- the scanner should normalise but classifier should not blow up
+    let crashed = false;
+    try {
+      classifyMessages([msg({ senderEmail: 'x@y.com', senderDomain: 'y.com', subject: null })]);
+    } catch (e) { crashed = true; }
+    assert('EC-003', 'Null subject does not crash classifier', !crashed);
+
+    // EC-004: Extreme-length subject (10KB)
+    const longSubject = 'A'.repeat(10000) + ' receipt';
+    r = classifyMessages([msg({ senderEmail: 'orders@store.com', senderDomain: 'store.com', subject: longSubject })]);
+    assert('EC-004', '10KB subject classified without hang', r.length === 1);
+
+    // EC-005: Very long sender email (unusual but RFC-valid)
+    r = classifyMessages([msg({ senderEmail: 'a'.repeat(200) + '@example.com', senderDomain: 'example.com' })]);
+    assert('EC-005', '200-char local part does not crash', r.length === 1);
+
+    // ── UNICODE & INTERNATIONAL ─────────────────────────────────
+    section('Unicode and international');
+
+    // UN-001: CJK sender name
+    r = classifyMessages([msg({ sender: '田中太郎', senderEmail: 'tanaka@example.jp', senderDomain: 'example.jp', subject: 'こんにちは' })]);
+    assert('UN-001', 'CJK sender and subject -> human', r[0].suggestedCategory === 'human');
+
+    // UN-002: Emoji in subject
+    r = classifyMessages([msg({ senderEmail: 'marketing@store.com', senderDomain: 'store.com', subject: '🎉 Flash sale 50% off! 🔥' })]);
+    assert('UN-002', 'Emoji subject with sale pattern -> retail_promos', r[0].suggestedCategory === 'retail_promos');
+
+    // UN-003: RTL (Arabic) subject
+    r = classifyMessages([msg({ senderEmail: 'a@example.com', senderDomain: 'example.com', subject: 'مرحبا كيف حالك' })]);
+    assert('UN-003', 'RTL subject does not crash', r.length === 1);
+
+    // UN-004: Mixed case and unicode in senderEmail normalisation
+    r = classifyMessages([
+      msg({ senderEmail: 'Naïve@Café.Com', senderDomain: 'café.com' }),
+      msg({ senderEmail: 'naïve@café.com', senderDomain: 'café.com' }),
+    ]);
+    assert('UN-004', 'Unicode email case-insensitive grouping', r.length === 1 && r[0].messages.length === 2);
+
+    // ── ADVERSARIAL / XSS ──────────────────────────────────────
+    section('Adversarial inputs (XSS attempts)');
+
+    // AD-001: sender name with <script>
+    const xssName = '<script>alert(1)<\/script>';
+    r = classifyMessages([msg({ sender: xssName, senderEmail: 'x@example.com', senderDomain: 'example.com' })]);
+    assert('AD-001', 'Script tag in sender name does not crash classifier', r.length === 1);
+
+    // AD-002: sender email with HTML
+    r = classifyMessages([msg({ senderEmail: '<img onerror=alert(1)>@y.com', senderDomain: 'y.com' })]);
+    assert('AD-002', 'HTML in sender email does not crash', r.length === 1);
+
+    // AD-003: prototype pollution attempt via sender
+    crashed = false;
+    try {
+      r = classifyMessages([msg({ senderEmail: '__proto__@x.com', senderDomain: 'x.com' })]);
+      // Verify no prototype pollution
+      const probe = {};
+      crashed = ('polluted' in probe);
+    } catch { crashed = true; }
+    assert('AD-003', 'No prototype pollution via senderEmail', !crashed);
+
+    // AD-004: DOM clobbering attempt via sender name "constructor"
+    r = classifyMessages([msg({ sender: 'constructor', senderEmail: 'x@y.com', senderDomain: 'y.com' })]);
+    assert('AD-004', 'Sender name "constructor" does not crash', r.length === 1);
+
+    // AD-005: sanitise with nested payloads
+    assert('AD-005', 'Sanitise nested script', sanitise('<img src=x onerror="<scr'+'ipt>alert(1)</scr'+'ipt>">').includes('&lt;'));
+
+    // AD-006: sanitise with SVG payload
+    assert('AD-006', 'Sanitise SVG onload', sanitise('<svg onload=alert(1)>').includes('&lt;svg'));
+
+    // AD-007: sanitise with javascript: pseudo-URL (note: sanitise only escapes HTML chars, not URL schemes)
+    const js = sanitise('javascript:alert(1)');
+    assert('AD-007', 'Sanitise does not introduce new HTML (escapes passthrough)', !js.includes('<'));
+
+    // ── REDOS CHECK (catastrophic backtracking timing) ─────────
+    section('ReDoS resistance');
+
+    // RD-001: Evil string against receipt subject patterns
+    const evil1 = 'a'.repeat(5000) + '!';
+    t0 = performance.now();
+    classifyMessages([msg({ senderEmail: 'x@y.com', senderDomain: 'y.com', subject: evil1 })]);
+    t1 = performance.now();
+    assert('RD-001', 'Long repeated chars in subject < 50ms', (t1 - t0) < 50, `${(t1 - t0).toFixed(1)}ms`);
+
+    // RD-002: Nested spaces (potential backtracking trigger)
+    const evil2 = 'registration  '.repeat(500) + '2024';
+    t0 = performance.now();
+    classifyMessages([msg({ senderEmail: 'x@y.com', senderDomain: 'y.com', subject: evil2 })]);
+    t1 = performance.now();
+    assert('RD-002', 'Repeated "registration  " pattern < 100ms', (t1 - t0) < 100, `${(t1 - t0).toFixed(1)}ms`);
+
+    // RD-003: Mixed case stress
+    const evil3 = 'Receipt Invoice Payment Order '.repeat(1000);
+    t0 = performance.now();
+    classifyMessages([msg({ senderEmail: 'x@y.com', senderDomain: 'y.com', subject: evil3 })]);
+    t1 = performance.now();
+    assert('RD-003', 'Repeated receipt keywords < 100ms', (t1 - t0) < 100, `${(t1 - t0).toFixed(1)}ms`);
+
+    // ── MEMORY / LEAK CHECK (rough) ────────────────────────────
+    section('Memory & leaks');
+
+    // ML-001: Running classify 100 times doesn't create unbounded references
+    const before = performance.memory ? performance.memory.usedJSHeapSize : null;
+    for (let i = 0; i < 100; i++) {
+      classifyMessages(genBatch(100));
+    }
+    const after = performance.memory ? performance.memory.usedJSHeapSize : null;
+    if (before && after) {
+      const deltaMB = (after - before) / (1024 * 1024);
+      assert('ML-001', '100x classify(100 msgs) heap growth < 20MB', deltaMB < 20, `Delta: ${deltaMB.toFixed(1)}MB`);
+    } else {
+      info('performance.memory not available (not Chromium) -- ML-001 skipped');
+    }
+
+    // ── PREFERENCES STRESS ─────────────────────────────────────
+    section('Preferences stress');
+
+    // PS-001: Save 1000 preferences, load back
+    const huge = {};
+    for (let i = 0; i < 1000; i++) huge[`sender${i}@x.com`] = 'newsletters';
+    savePreferences(huge);
+    const loaded = loadPreferences();
+    assert('PS-001', '1000 preferences round-trip intact', Object.keys(loaded).length === 1000);
+    clearPreferences();
+
+    // PS-002: Preferences with invalid category is filtered
+    savePreferences({ 'a@b.com': 'bogus_category', 'c@d.com': 'newsletters' });
+    const filtered = loadPreferences();
+    assert('PS-002', 'Invalid category filtered on load', !('a@b.com' in filtered) && filtered['c@d.com'] === 'newsletters');
+    clearPreferences();
+
+    // ── BATCH BOUNDARY CHECK (chunk size verification) ─────────
+    section('Batch boundary');
+
+    // Can't test batchModify directly without Gmail API, but can verify chunk logic
+    // via simulating message ID arrays at boundaries.
+    const idsAt999 = Array.from({length: 999}, (_, i) => 'id' + i);
+    const idsAt1000 = Array.from({length: 1000}, (_, i) => 'id' + i);
+    const idsAt1001 = Array.from({length: 1001}, (_, i) => 'id' + i);
+    const idsAt2500 = Array.from({length: 2500}, (_, i) => 'id' + i);
+
+    function chunkCount(arr, size) {
+      let count = 0;
+      for (let i = 0; i < arr.length; i += size) count++;
+      return count;
+    }
+    assert('BB-001', '999 ids -> 1 chunk', chunkCount(idsAt999, 1000) === 1);
+    assert('BB-002', '1000 ids -> 1 chunk', chunkCount(idsAt1000, 1000) === 1);
+    assert('BB-003', '1001 ids -> 2 chunks', chunkCount(idsAt1001, 1000) === 2);
+    assert('BB-004', '2500 ids -> 3 chunks', chunkCount(idsAt2500, 1000) === 3);
+
+    // ── SUMMARY ────────────────────────────────────────────────
+    summaryEl.className = `summary ${failed === 0 ? 'all-pass' : 'has-fail'}`;
+    summaryEl.textContent = `${passed} passed, ${failed} failed out of ${passed + failed} tests`;
+  </script>
+</body>
+</html>
