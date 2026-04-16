@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Dry Run Against Al's Inbox | Inbox Sort and Tidy</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1100px; margin: 2rem auto; padding: 0 1rem; color: #1a1a1a; }
+    h1 { font-size: 1.3rem; }
+    h2 { font-size: 1rem; margin-top: 2rem; padding: 0.4rem 0.6rem; background: #f3f4f6; border-left: 3px solid #6366f1; }
+    table { border-collapse: collapse; width: 100%; margin: 0.5rem 0; font-size: 0.85rem; }
+    th, td { border: 1px solid #e5e7eb; padding: 0.4rem 0.6rem; text-align: left; vertical-align: top; }
+    th { background: #f9fafb; font-weight: 700; }
+    .cat { font-weight: 600; font-size: 0.75rem; padding: 2px 6px; border-radius: 3px; }
+    .cat-job_alerts { background: #ede9fe; color: #5b21b6; }
+    .cat-kids_activities { background: #d1fae5; color: #065f46; }
+    .cat-receipts { background: #dbeafe; color: #1e40af; }
+    .cat-newsletters { background: #fef3c7; color: #92400e; }
+    .cat-retail_promos { background: #fce7f3; color: #9d174d; }
+    .cat-social { background: #e0e7ff; color: #3730a3; }
+    .cat-notifications { background: #f3f4f6; color: #4b5563; }
+    .cat-human { background: #fee2e2; color: #991b1b; }
+    .warn { background: #fff7ed; padding: 0.75rem; border-left: 3px solid #f97316; margin: 1rem 0; font-size: 0.85rem; }
+    code { font-size: 0.8rem; color: #6366f1; }
+    .totals { font-size: 1rem; font-weight: 600; }
+    .num { text-align: right; font-family: monospace; }
+  </style>
+</head>
+<body>
+<h1>Dry Run: Al's Inbox (100 most recent messages)</h1>
+<div class="warn">
+  <strong>Caveat:</strong> The Gmail MCP connector does not expose the <code>List-Unsubscribe</code> header,
+  so the <strong>Newsletters</strong> category will be under-detected in this dry run.
+  The real web app uses the Gmail REST API directly and WILL get this header. All other categories
+  (Job Alerts, Kids &amp; Activities, Receipts, Retail Promos, Social, Notifications, Human) are accurate.
+</div>
+<div id="output">Loading...</div>
+
+<script type="module">
+import { classifyMessages } from '../js/classifier.js?v=2';
+
+const output = document.getElementById('output');
+
+function parseFrom(from) {
+  const m = from && from.match(/^(.*?)\s*<([^>]+)>\s*$/);
+  if (m) return { sender: m[1].replace(/^"|"$/g, '').trim(), senderEmail: m[2].trim() };
+  return { sender: '', senderEmail: (from || '').trim() };
+}
+function domainOf(email) {
+  const at = email.indexOf('@');
+  return at >= 0 ? email.slice(at + 1).toLowerCase() : '';
+}
+function el(tag, attrs, text) {
+  const e = document.createElement(tag);
+  if (attrs) for (const [k,v] of Object.entries(attrs)) e.setAttribute(k, v);
+  if (text !== undefined) e.textContent = text;
+  return e;
+}
+function catBadge(cat) {
+  return `<span class="cat cat-${cat}">${cat}</span>`;
+}
+
+let raw;
+try {
+  const res = await fetch('./al-sample.json');
+  if (!res.ok) throw new Error('sample file not found');
+  raw = await res.json();
+} catch (e) {
+  output.replaceChildren();
+  const warn = el('div', {class:'warn'});
+  warn.innerHTML = '<strong>No sample data available.</strong> This dry-run harness requires a local <code>test/al-sample.json</code> file containing real message headers. That file is gitignored and never committed (it contains PII). To generate one, use the Gmail MCP connector to fetch inbox messages and save the result to <code>test/al-sample.json</code>.';
+  output.append(warn);
+  throw e;
+}
+
+const normalised = raw.map(m => {
+  const { sender, senderEmail } = parseFrom(m.headers.From);
+  return {
+    id: m.id,
+    sender,
+    senderEmail: senderEmail.toLowerCase(),
+    senderDomain: domainOf(senderEmail),
+    subject: m.headers.Subject || '',
+    hasUnsubscribe: false,
+    date: 0,
+    sizeEstimate: m.sizeEstimate || 0,
+  };
+}).filter(m => m.senderEmail);
+
+const groups = classifyMessages(normalised);
+
+// Distribution
+const dist = {};
+for (const g of groups) {
+  const c = g.suggestedCategory;
+  if (!dist[c]) dist[c] = { senders: 0, messages: 0, bytes: 0 };
+  dist[c].senders++;
+  dist[c].messages += g.messages.length;
+  dist[c].bytes += g.messages.reduce((s, m) => s + (m.sizeEstimate || 0), 0);
+}
+const actionMap = {
+  job_alerts: 'label + archive',
+  kids_activities: 'label + keep',
+  receipts: 'label + archive',
+  newsletters: 'label + archive',
+  retail_promos: 'archive',
+  social: 'archive',
+  notifications: 'archive',
+  human: 'keep in inbox',
+};
+
+output.replaceChildren();
+output.append(el('p', {class:'totals'}, `${normalised.length} messages analysed, ${groups.length} unique senders`));
+
+// Distribution table
+const h2a = el('h2', {}, 'Distribution by Category');
+output.append(h2a);
+const t1 = el('table');
+let html1 = '<tr><th>Category</th><th class="num">Senders</th><th class="num">Messages</th><th class="num">Size (MB)</th><th>Default Action</th></tr>';
+const order = ['job_alerts','kids_activities','receipts','newsletters','retail_promos','social','notifications','human'];
+let totalKept = 0, totalActioned = 0;
+for (const c of order) {
+  if (!dist[c]) continue;
+  const mb = (dist[c].bytes / 1024 / 1024).toFixed(2);
+  html1 += `<tr><td>${catBadge(c)}</td><td class="num">${dist[c].senders}</td><td class="num">${dist[c].messages}</td><td class="num">${mb}</td><td>${actionMap[c]}</td></tr>`;
+  if (c === 'human') totalKept += dist[c].messages;
+  else totalActioned += dist[c].messages;
+}
+html1 += `<tr style="font-weight:700;background:#f9fafb"><td>TOTAL</td><td></td><td class="num">${normalised.length}</td><td></td><td>${totalActioned} actioned, ${totalKept} kept</td></tr>`;
+t1.innerHTML = html1;
+output.append(t1);
+
+// Top senders
+const h2b = el('h2', {}, `Top 20 Senders (of ${groups.length} unique senders)`);
+output.append(h2b);
+const t2 = el('table');
+let html2 = '<tr><th class="num">Count</th><th>Category</th><th>Sender</th><th>Sample subject</th></tr>';
+for (const g of groups.slice(0, 20)) {
+  const name = (g.senderName || '(no name)').replace(/</g,'&lt;');
+  const email = g.senderEmail.replace(/</g,'&lt;');
+  const subj = (g.messages[0].subject || '').replace(/</g,'&lt;').slice(0,70);
+  html2 += `<tr><td class="num">${g.messages.length}</td><td>${catBadge(g.suggestedCategory)}</td><td>${name}<br><code>${email}</code></td><td>${subj}</td></tr>`;
+}
+t2.innerHTML = html2;
+output.append(t2);
+
+// Human bucket (safety check)
+const h2c = el('h2', {}, 'Senders classified as "Human" (kept in inbox -- safest bucket)');
+output.append(h2c);
+const humans = groups.filter(g => g.suggestedCategory === 'human');
+if (humans.length === 0) {
+  output.append(el('p', {}, '(none)'));
+} else {
+  const t3 = el('table');
+  let html3 = '<tr><th class="num">Count</th><th>Sender</th><th>Sample subject</th></tr>';
+  for (const g of humans) {
+    const name = (g.senderName || '(no name)').replace(/</g,'&lt;');
+    const email = g.senderEmail.replace(/</g,'&lt;');
+    const subj = (g.messages[0].subject || '').replace(/</g,'&lt;').slice(0,80);
+    html3 += `<tr><td class="num">${g.messages.length}</td><td>${name}<br><code>${email}</code></td><td>${subj}</td></tr>`;
+  }
+  t3.innerHTML = html3;
+  output.append(t3);
+}
+
+// Notifications bucket (would be archived -- check for concerning ones)
+const h2d = el('h2', {}, 'Senders classified as "Notifications" (would be archived -- review carefully)');
+output.append(h2d);
+const notifs = groups.filter(g => g.suggestedCategory === 'notifications');
+const t4 = el('table');
+let html4 = '<tr><th class="num">Count</th><th>Sender</th><th>Sample subject</th></tr>';
+for (const g of notifs) {
+  const name = (g.senderName || '(no name)').replace(/</g,'&lt;');
+  const email = g.senderEmail.replace(/</g,'&lt;');
+  const subj = (g.messages[0].subject || '').replace(/</g,'&lt;').slice(0,80);
+  html4 += `<tr><td class="num">${g.messages.length}</td><td>${name}<br><code>${email}</code></td><td>${subj}</td></tr>`;
+}
+t4.innerHTML = html4;
+output.append(t4);
+
+// Full classification table for review
+const h2e = el('h2', {}, 'All senders (full classification for review)');
+output.append(h2e);
+const t5 = el('table');
+let html5 = '<tr><th class="num">Count</th><th>Category</th><th>Sender</th><th>Sample subject</th></tr>';
+for (const g of groups) {
+  const name = (g.senderName || '(no name)').replace(/</g,'&lt;');
+  const email = g.senderEmail.replace(/</g,'&lt;');
+  const subj = (g.messages[0].subject || '').replace(/</g,'&lt;').slice(0,80);
+  html5 += `<tr><td class="num">${g.messages.length}</td><td>${catBadge(g.suggestedCategory)}</td><td>${name}<br><code>${email}</code></td><td>${subj}</td></tr>`;
+}
+t5.innerHTML = html5;
+output.append(t5);
+</script>
+</body>
+</html>

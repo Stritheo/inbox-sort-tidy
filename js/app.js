@@ -10,7 +10,7 @@ import { initAuth, requestAuth, revokeAuth, isAuthenticated } from './auth.js';
 import { getProfile, AuthExpiredError } from './gmail.js';
 import { countInbox, scanNextWave, scanFullInbox, getScanProgress, estimateScanTime, resetScanState } from './scanner.js';
 import { classifyMessages } from './classifier.js';
-import { renderSenderTable, renderProgress, renderPreview, renderResults } from './ui.js';
+import { renderSenderTable, renderProgress, renderPreview, renderBeforeAfter, renderResults } from './ui.js';
 import { loadPreferences, applyPreferences, saveCurrentChoices } from './preferences.js';
 import { executeActions, undoActions, canUndo, clearUndoManifest } from './actions.js';
 
@@ -53,7 +53,13 @@ const els = {
   labelNewsletters: document.getElementById('label-newsletters'),
   labelReceipts: document.getElementById('label-receipts'),
   labelFyi: document.getElementById('label-fyi'),
+  labelJobAlerts: document.getElementById('label-job-alerts'),
+  labelKidsActivities: document.getElementById('label-kids-activities'),
   previewLabelHint: document.getElementById('preview-label-hint'),
+  countBefore: document.getElementById('count-before'),
+  countAfter: document.getElementById('count-after'),
+  resultsBreakdown: document.getElementById('results-breakdown'),
+  resultsStorage: document.getElementById('results-storage'),
 };
 
 // ── State ──────────────────────────────────────────────────────
@@ -61,19 +67,31 @@ const els = {
 let senderGroups = [];
 let allMessages = [];
 let _isScanning = false;
-let _scanController = null; // AbortController for scan cancellation
+let _scanController = null;
 
 /**
  * Read custom label names from the config inputs.
  * Falls back to defaults if inputs are empty.
  */
-function getLabelNames() {
-  return {
-    newsletters: (els.labelNewsletters && els.labelNewsletters.value.trim()) || 'Newsletters',
-    receipts: (els.labelReceipts && els.labelReceipts.value.trim()) || 'Receipts',
-    fyi: (els.labelFyi && els.labelFyi.value.trim()) || 'FYI',
-  };
-} // accumulates across waves
+function getLabelOverrides() {
+  const overrides = {};
+  if (els.labelNewsletters && els.labelNewsletters.value.trim()) {
+    overrides['Newsletters'] = els.labelNewsletters.value.trim();
+  }
+  if (els.labelReceipts && els.labelReceipts.value.trim()) {
+    overrides['Receipts'] = els.labelReceipts.value.trim();
+  }
+  if (els.labelFyi && els.labelFyi.value.trim()) {
+    overrides['FYI'] = els.labelFyi.value.trim();
+  }
+  if (els.labelJobAlerts && els.labelJobAlerts.value.trim()) {
+    overrides['Job Alerts'] = els.labelJobAlerts.value.trim();
+  }
+  if (els.labelKidsActivities && els.labelKidsActivities.value.trim()) {
+    overrides['Kids & Activities'] = els.labelKidsActivities.value.trim();
+  }
+  return overrides;
+}
 
 // ── View management ────────────────────────────────────────────
 
@@ -144,33 +162,29 @@ async function startScan() {
   if (_isScanning) return;
   _isScanning = true;
   showView('scanning');
-  // Show indeterminate progress bar during counting (removeAttribute makes it pulse)
   if (els.scanProgress) els.scanProgress.removeAttribute('value');
   renderProgress(0, 0, 'Counting emails in your inbox...', els.scanProgress, els.scanStatus);
   allMessages = [];
 
   try {
-    // Step 1: Count total inbox messages (cheap: just lists IDs)
     const totalCount = await countInbox((phase) => {
       renderProgress(0, 0, phase, els.scanProgress, els.scanStatus);
     });
 
     if (totalCount === 0) {
       showView('done');
-      renderResults({ archived: 0, newsletters: 0, receipts: 0, fyi: 0, kept: 0 }, els.doneResults);
+      renderResults({ archived: 0, kept: 0 }, els.doneResults);
       const p = document.createElement('p');
       p.textContent = 'Your inbox is already empty. Nothing to tidy.';
       els.doneResults.prepend(p);
       return;
     }
 
-    // Step 2: If inbox is large, offer choice before scanning metadata
     if (totalCount > 2500) {
       showScanChoice(totalCount);
       return;
     }
 
-    // Small inbox: scan everything as one wave
     await runWaveScan();
 
   } catch (err) {
@@ -183,14 +197,11 @@ async function startScan() {
  */
 function showScanChoice(totalCount) {
   const est = estimateScanTime(totalCount);
-
-  // If count hit the 50k cap, show "over" to avoid fake-looking round number
   const isAtCap = totalCount >= 50000;
   const countText = isAtCap
     ? `Over ${totalCount.toLocaleString()} emails`
     : `${totalCount.toLocaleString()} emails found`;
 
-  // Build choice UI inside the scanning view card
   const container = views.scanning.querySelector('.view-card');
   container.replaceChildren();
   container.classList.add('scan-choice');
@@ -206,7 +217,6 @@ function showScanChoice(totalCount) {
   const btnGroup = document.createElement('div');
   btnGroup.classList.add('button-group', 'button-group--column');
 
-  // Wave option (recommended)
   const waveBtn = document.createElement('button');
   waveBtn.type = 'button';
   waveBtn.classList.add('btn-primary', 'btn-large');
@@ -223,7 +233,6 @@ function showScanChoice(totalCount) {
   waveHint.textContent = 'Recommended. Tidy in batches, under\u00a0a\u00a0minute each.';
   btnGroup.appendChild(waveHint);
 
-  // Full option
   const fullBtn = document.createElement('button');
   fullBtn.type = 'button';
   fullBtn.classList.add('btn-secondary', 'btn-large');
@@ -274,7 +283,6 @@ function restoreScanningView() {
   hint.textContent = 'This usually takes under a minute.';
   container.appendChild(hint);
 
-  // Re-bind element references
   els.scanProgress = progress;
   els.scanStatus = status;
 }
@@ -319,7 +327,6 @@ function showResults(hasMore) {
 
   renderSenderTable(senderGroups, els.senderTableContainer);
 
-  // Show/hide "Scan more" section
   if (els.scanMoreContainer) {
     if (hasMore) {
       const progress = getScanProgress();
@@ -340,7 +347,6 @@ function handleScanError(err) {
   _isScanning = false;
   _scanController = null;
   if (err.name === 'AbortError') {
-    // User cancelled — go back to connect silently
     showView('connect');
     return;
   }
@@ -383,19 +389,22 @@ els.btnPreview.addEventListener('click', () => {
   renderPreview(senderGroups, els.previewSummary);
 
   // Show which labels will be created
-  const labels = getLabelNames();
+  const overrides = getLabelOverrides();
   const labelList = [];
-  // Only mention labels that will actually be used
-  const counts = { newsletters: 0, receipts: 0, fyi: 0 };
+  const usedLabels = new Set();
+
   for (const g of senderGroups) {
     const cat = g.assignedCategory || g.suggestedCategory;
-    if (cat === 'newsletters') counts.newsletters += g.messages.length;
-    else if (cat === 'receipts') counts.receipts += g.messages.length;
-    else if (cat === 'fyi') counts.fyi += g.messages.length;
+    const labelName = g.sublabel || g.labelName;
+    if (labelName && cat !== 'human') {
+      const finalLabel = overrides[labelName] || labelName;
+      usedLabels.add(finalLabel);
+    }
   }
-  if (counts.newsletters > 0) labelList.push(`"${labels.newsletters}"`);
-  if (counts.receipts > 0) labelList.push(`"${labels.receipts}"`);
-  if (counts.fyi > 0) labelList.push(`"${labels.fyi}"`);
+
+  for (const label of usedLabels) {
+    labelList.push(`"${label}"`);
+  }
 
   if (els.previewLabelHint && labelList.length > 0) {
     els.previewLabelHint.textContent = `Labels that will be created in Gmail: ${labelList.join(', ')}`;
@@ -416,14 +425,23 @@ els.btnExecute.addEventListener('click', async () => {
   renderProgress(0, 0, 'Working...', els.execProgress, els.execStatus);
 
   try {
-    const labels = getLabelNames();
-    const stats = await executeActions(senderGroups, labels, (completed, total) => {
+    const overrides = getLabelOverrides();
+    const results = await executeActions(senderGroups, overrides, (completed, total) => {
       renderProgress(completed, total, `Tidying... ${completed} / ${total} processed`, els.execProgress, els.execStatus);
     });
 
-    renderResults(stats, els.doneResults);
+    // Render before/after results screen
+    renderBeforeAfter(results, {
+      before: els.countBefore,
+      after: els.countAfter,
+      breakdown: els.resultsBreakdown,
+      storage: els.resultsStorage,
+    });
 
-    // If the inbox was capped at 50k, prompt to scan again for remaining
+    // Clear the simple results container (used for empty inbox fallback)
+    if (els.doneResults) els.doneResults.replaceChildren();
+
+    // If more emails remain in inbox beyond what was scanned
     const scanState = getScanProgress();
     if (scanState && scanState.remaining > 0) {
       const moreP = document.createElement('p');
@@ -432,7 +450,7 @@ els.btnExecute.addEventListener('click', async () => {
       els.doneResults.appendChild(moreP);
     }
 
-    // Show undo section if available
+    // Show undo section
     if (els.undoSection) {
       els.undoSection.hidden = false;
       els.btnUndo.disabled = false;
@@ -479,9 +497,17 @@ els.btnUndo.addEventListener('click', async () => {
       els.btnUndo.textContent = `Undoing... ${completed} / ${total}`;
     });
 
-    els.doneResults.replaceChildren();
+    // Reset the done screen
+    if (els.doneResults) els.doneResults.replaceChildren();
+    if (els.resultsBreakdown) els.resultsBreakdown.replaceChildren();
+    if (els.resultsStorage) els.resultsStorage.hidden = true;
+
     const header = document.querySelector('.done-header h2');
     if (header) header.textContent = 'Changes reversed';
+
+    // Reset before/after
+    if (els.countBefore) els.countBefore.textContent = '';
+    if (els.countAfter) els.countAfter.textContent = '';
 
     const lines = [];
     if (stats.restored > 0) lines.push(`${stats.restored} emails moved back to your inbox.`);
@@ -504,7 +530,7 @@ els.btnUndo.addEventListener('click', async () => {
   }
 });
 
-// Scan more button (added dynamically to results view)
+// Scan more button
 const btnScanMore = document.getElementById('btn-scan-more');
 if (btnScanMore) {
   btnScanMore.addEventListener('click', async () => {

@@ -9,7 +9,10 @@
       style-src 'self';
       connect-src https://gmail.googleapis.com https://www.googleapis.com https://accounts.google.com;
       frame-src https://accounts.google.com;
-      img-src 'self' data:;">
+      img-src 'self' data:;
+      object-src 'none';
+      base-uri 'self';
+      form-action 'self';">
   <title>Inbox Sort and Tidy</title>
   <link rel="icon" type="image/png" sizes="512x512" href="favicon-512.png">
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
@@ -45,7 +48,7 @@
         </nav>
       </div>
 
-      <p class="connect-hint" id="connect-hint" hidden>A Google sign-in window will open. If your computer asks for a keychain or autofill password, you can skip it — just sign in with your Google account directly.</p>
+      <p class="connect-hint" id="connect-hint" hidden>A Google sign-in window will open. If your computer asks for a keychain or autofill password, you can skip it. Just sign in with your Google account directly.</p>
       <div id="connect-error" class="error-alert" hidden role="alert"></div>
     </section>
 
@@ -75,10 +78,18 @@
         <p>Each sender has been categorised. Adjust any that need changing, then preview.</p>
 
         <details class="label-config" id="label-config">
-          <summary>Label names <span class="config-hint">— tap to rename</span></summary>
+          <summary>Label names <span class="config-hint">tap to rename</span></summary>
           <p class="config-description">These labels will be created in your Gmail account. Rename them to suit how you organise things.</p>
           <p class="config-note">Renaming a label changes what it is called in Gmail. It does not change which emails go into it.</p>
           <div class="label-fields">
+            <div class="label-field">
+              <label for="label-job-alerts">Job Alerts label</label>
+              <input type="text" id="label-job-alerts" value="Job Alerts" maxlength="40" autocomplete="off">
+            </div>
+            <div class="label-field">
+              <label for="label-kids-activities">Kids label</label>
+              <input type="text" id="label-kids-activities" value="Kids & Activities" maxlength="40" autocomplete="off">
+            </div>
             <div class="label-field">
               <label for="label-newsletters">Newsletters label</label>
               <input type="text" id="label-newsletters" value="Newsletters" maxlength="40" autocomplete="off">
@@ -86,10 +97,6 @@
             <div class="label-field">
               <label for="label-receipts">Receipts label</label>
               <input type="text" id="label-receipts" value="Receipts" maxlength="40" autocomplete="off">
-            </div>
-            <div class="label-field">
-              <label for="label-fyi">FYI label</label>
-              <input type="text" id="label-fyi" value="FYI" maxlength="40" autocomplete="off">
             </div>
           </div>
         </details>
@@ -137,7 +144,25 @@
           </div>
           <h2>Inbox tidied</h2>
         </div>
+
+        <div class="results-grid" aria-label="Before and after comparison">
+          <div class="results-panel" aria-label="Before tidying">
+            <h3>Before</h3>
+            <p id="count-before" class="results-count results-count--before">0</p>
+            <p class="results-subtitle">messages in your inbox</p>
+          </div>
+          <div class="results-panel" aria-label="After tidying">
+            <h3>After</h3>
+            <p id="count-after" class="results-count results-count--after">0</p>
+            <p class="results-subtitle">messages that need your attention</p>
+          </div>
+        </div>
+
+        <div id="results-breakdown" aria-live="polite"></div>
+        <p id="results-storage" class="results-storage" hidden></p>
+
         <div id="done-results" class="results-stats" aria-live="polite"></div>
+
         <div class="button-group button-group--centre">
           <button id="btn-scan-again" type="button" class="btn-primary">Scan Again</button>
           <button id="btn-done-disconnect" type="button" class="btn-secondary">Disconnect</button>
@@ -147,6 +172,7 @@
           <p class="undo-hint">Put every email back in your inbox, exactly as it was.</p>
           <p class="undo-hint">Closing this page will remove the undo option.</p>
         </div>
+        <p class="results-credit">Built by Miles Sowden. Free, open source, no data stored.</p>
       </div>
     </section>
 

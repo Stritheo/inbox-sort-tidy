@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>UAT Plan v2 | Inbox Sort and Tidy</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: system-ui, sans-serif; max-width: 860px; margin: 2rem auto; padding: 0 1.5rem; color: #1a1a1a; line-height: 1.5; }
+    h1 { font-size: 1.4rem; margin-bottom: 0.25rem; }
+    .meta { color: #666; font-size: 0.85rem; margin-bottom: 2rem; }
+    h2 { font-size: 1rem; font-weight: 700; margin: 2rem 0 0.5rem; padding: 0.4rem 0.75rem; background: #f3f4f6; border-left: 3px solid #6366f1; }
+    h3 { font-size: 0.875rem; font-weight: 700; margin: 1.25rem 0 0.5rem; color: #374151; }
+    .case { display: flex; align-items: flex-start; gap: 0.75rem; padding: 0.5rem 0; border-bottom: 1px solid #f3f4f6; }
+    .case:last-child { border-bottom: none; }
+    .case input[type="checkbox"] { margin-top: 0.2rem; flex-shrink: 0; width: 16px; height: 16px; cursor: pointer; accent-color: #6366f1; }
+    .case label { cursor: pointer; font-size: 0.875rem; }
+    .case label strong { font-size: 0.75rem; font-family: monospace; color: #6366f1; margin-right: 0.4rem; }
+    .case label .expected { display: block; color: #6b7280; font-size: 0.8rem; margin-top: 0.15rem; padding-left: 0.25rem; border-left: 2px solid #e5e7eb; }
+    .case label .prereq { display: block; color: #92400e; font-size: 0.78rem; margin-top: 0.15rem; font-style: italic; }
+    .progress-bar { position: sticky; top: 0; background: white; border-bottom: 1px solid #e5e7eb; padding: 0.75rem 0; margin-bottom: 1rem; z-index: 10; }
+    .progress-inner { height: 8px; background: #e5e7eb; border-radius: 4px; overflow: hidden; }
+    .progress-fill { height: 100%; background: #6366f1; transition: width 0.3s ease; border-radius: 4px; }
+    .progress-label { font-size: 0.8rem; color: #666; margin-bottom: 0.4rem; }
+    .section-group { margin-bottom: 0.5rem; }
+    .badge { display: inline-block; font-size: 0.7rem; font-weight: 600; padding: 0.1rem 0.4rem; border-radius: 3px; margin-left: 0.5rem; vertical-align: middle; }
+    .badge--p0 { background: #fef2f2; color: #991b1b; }
+    .badge--p1 { background: #fff7ed; color: #92400e; }
+    .pass { color: #047857; }
+    .completed .case label { text-decoration: line-through; color: #9ca3af; }
+  </style>
+</head>
+<body>
+
+<div class="progress-bar">
+  <div class="progress-label"><span id="progress-text">0 of 0 cases checked</span></div>
+  <div class="progress-inner"><div class="progress-fill" id="progress-fill" style="width: 0%"></div></div>
+</div>
+
+<h1>UAT Plan v2 | Inbox Sort and Tidy</h1>
+<p class="meta">Version: 2.0 &nbsp;|&nbsp; Date: April 2026 &nbsp;|&nbsp; Tester: _________________ &nbsp;|&nbsp; Environment: production (GitHub Pages)</p>
+
+<!-- ─── SECTION 1 ─── -->
+<h2>1. Classifier: 8-category priority chain <span class="badge badge--p0">P0</span></h2>
+
+<h3>Job alerts detection</h3>
+<div class="section-group">
+  <div class="case">
+    <input type="checkbox" id="cl-01"><label for="cl-01"><strong>CL-01</strong> Email from jobs-noreply@linkedin.com with subject "5 new jobs matching Software Engineer"
+      <span class="expected">Expected: classified as Job Alerts, action = label and archive</span>
+    </label>
+  </div>
+  <div class="case">
+    <input type="checkbox" id="cl-02"><label for="cl-02"><strong>CL-02</strong> Email from jobalerts@seek.com.au with subject "New jobs for you"
+      <span class="expected">Expected: classified as Job Alerts (SEEK is an AU job domain)</span>
+    </label>
+  </div>
+  <div class="case">
+    <input type="checkbox" id="cl-03"><label for="cl-03"><strong>CL-03</strong> Regular LinkedIn notification from notifications-noreply@linkedin.com (e.g. "You have 3 new followers")
+      <span class="expected">Expected: classified as Social, NOT Job Alerts (LinkedIn disambiguation)</span>
+    </label>
+  </div>
+</div>
+
+<h3>Kids and activities detection</h3>
+<div class="section-group">
+  <div class="case">
+    <input type="checkbox" id="cl-04"><label for="cl-04"><strong>CL-04</strong> Email from noreply@sentral.com.au (school platform)
+      <span class="expected">Expected: classified as Kids &amp; Activities, action = label and keep in inbox</span>
+    </label>
+  </div>
+  <div class="case">
+    <input type="checkbox" id="cl-05"><label for="cl-05"><strong>CL-05</strong> Email from no-reply@compass.education (school platform)
+      <span class="expected">Expected: classified as Kids &amp; Activities, NOT Notifications (kids beats noreply in priority)</span>
+    </label>
+  </div>
+  <div class="case">
+    <input type="checkbox" id="cl-06"><label for="cl-06"><strong>CL-06</strong> Email from operations@sportingpulse.com (sports club platform)
+      <span class="expected">Expected: classified as Kids &amp; Activities</span>
+    </label>
+  </div>
+</div>
+
+<h3>Receipts detection</h3>
+<div class="section-group">
+  <div class="case">
+    <input type="checkbox" id="cl-07"><label for="cl-07"><strong>CL-07</strong> Email from receipts@afterpay.com (AU financial domain)
+      <span class="expected">Expected: classified as Receipts, action = label and archive</span>
+    </label>
+  </div>
+  <div class="case">
+    <input type="checkbox" id="cl-08"><label for="cl-08"><strong>CL-08</strong> Email from noreply@commbank.com.au with subject "Your transaction receipt"
+      <span class="expected">Expected: classified as Receipts</span>
+    </label>
+  </div>
+</div>
+
+<h3>Newsletters detection</h3>
+<div class="section-group">
+  <div class="case">
+    <input type="checkbox" id="cl-09"><label for="cl-09"><strong>CL-09</strong> Email with List-Unsubscribe header from a food newsletter (e.g. taste.com.au)
+      <span class="expected">Expected: classified as Newsletters with sublabel "Recipes"</span>
+    </label>
+  </div>
+  <div class="case">
+    <input type="checkbox" id="cl-10"><label for="cl-10"><strong>CL-10</strong> Any email with List-Unsubscribe header that is not social, job alert, receipt, or kids
+      <span class="expected">Expected: classified as Newsletters, action = label and archive</span>
+    </label>
+  </div>
+</div>
+
+<h3>Retail promos, social, notifications</h3>
+<div class="section-group">
+  <div class="case">
+    <input type="checkbox" id="cl-11"><label for="cl-11"><strong>CL-11</strong> Email from promotions@bigw.com.au or kmart.com.au
+      <span class="expected">Expected: classified as Retail Promos, action = archive (no label)</span>
+    </label>
+  </div>
+  <div class="case">
+    <input type="checkbox" id="cl-12"><label for="cl-12"><strong>CL-12</strong> Email from noreply@facebookmail.com
+      <span class="expected">Expected: classified as Social, action = archive</span>
+    </label>
+  </div>
+  <div class="case">
+    <input type="checkbox" id="cl-13"><label for="cl-13"><strong>CL-13</strong> Email from noreply@example.com with no other matching signals
+      <span class="expected">Expected: classified as Notifications, action = archive</span>
+    </label>
+  </div>
+</div>
+
+<h3>Human (safe fallback)</h3>
+<div class="section-group">
+  <div class="case">
+    <input type="checkbox" id="cl-14"><label for="cl-14"><strong>CL-14</strong> Email from a real person's address (e.g. alice@gmail.com) with conversational subject
+      <span class="expected">Expected: classified as Human, action = keep in inbox, no label</span>
+    </label>
+  </div>
+</div>
+
+<!-- ─── SECTION 2 ─── -->
+<h2>2. Sender table UI <span class="badge badge--p0">P0</span></h2>
+
+<div class="section-group">
+  <div class="case">
+    <input type="checkbox" id="ui-01"><label for="ui-01"><strong>UI-01</strong> Category colour tag appears next to each sender name
+      <span class="expected">Expected: coloured tag (e.g. purple for Job Alerts, green for Kids) updates when dropdown changes</span>
+    </label>
+  </div>
+  <div class="case">
+    <input type="checkbox" id="ui-02"><label for="ui-02"><strong>UI-02</strong> Dropdown shows all 8 category options
+      <span class="expected">Expected: Job Alerts, Kids &amp; Activities, Receipts, Newsletters, Retail Promos, Social, Notifications, Keep in Inbox</span>
+    </label>
+  </div>
+  <div class="case">
+    <input type="checkbox" id="ui-03"><label for="ui-03"><strong>UI-03</strong> Changing a sender's dropdown immediately updates the category tag colour
+      <span class="expected">Expected: tag colour changes in real time without page reload</span>
+    </label>
+  </div>
+  <div class="case">
+    <input type="checkbox" id="ui-04"><label for="ui-04"><strong>UI-04</strong> Sender name with HTML special characters (e.g. a sender called "Tom &amp; Jerry") renders safely
+      <span class="expected">Expected: displays as literal text "Tom &amp; Jerry", not as HTML entities or broken markup</span>
+    </label>
+  </div>
+  <div class="case">
+    <input type="checkbox" id="ui-05"><label for="ui-05"><strong>UI-05</strong> Senders sorted by email count descending (highest volume first)
+      <span class="expected">Expected: first row has the most messages</span>
+    </label>
+  </div>
+</div>
+
+<!-- ─── SECTION 3 ─── -->
+<h2>3. label_keep action (Kids &amp; Activities) <span class="badge badge--p0">P0</span></h2>
+
+<div class="section-group">
+  <div class="case">
+    <input type="checkbox" id="lk-01"><label for="lk-01"><strong>LK-01</strong> Execute with at least one Kids &amp; Activities sender. Check Gmail immediately after.
+      <span class="expected">Expected: emails have the "Kids &amp; Activities" label AND still appear in inbox (INBOX label not removed)</span>
+    </label>
+  </div>
+  <div class="case">
+    <input type="checkbox" id="lk-02"><label for="lk-02"><strong>LK-02</strong> Compare Kids &amp; Activities vs Newsletters in Gmail "All Mail" after execution
+      <span class="expected">Expected: Newsletters emails do NOT appear in inbox. Kids emails DO.</span>
+    </label>
+  </div>
+</div>
+
+<!-- ─── SECTION 4 ─── -->
+<h2>4. Label matching (no duplicates) <span class="badge badge--p0">P0</span></h2>
+
+<div class="section-group">
+  <div class="case">
+    <input type="checkbox" id="lm-01"><label for="lm-01"><strong>LM-01</strong> In Gmail, manually create a label called "Receipts" (exact match). Run the tool and execute.
+      <span class="expected">Expected: no second "Receipts" label is created. Existing label is reused.</span>
+      <span class="prereq">Pre-req: create the label in Gmail before scanning</span>
+    </label>
+  </div>
+  <div class="case">
+    <input type="checkbox" id="lm-02"><label for="lm-02"><strong>LM-02</strong> In Gmail, create a label called "receipts" (lowercase). Run the tool and execute.
+      <span class="expected">Expected: no duplicate created. Case-insensitive match reuses the existing label.</span>
+    </label>
+  </div>
+  <div class="case">
+    <input type="checkbox" id="lm-03"><label for="lm-03"><strong>LM-03</strong> First-time user with no existing Gmail labels. Run the tool and execute.
+      <span class="expected">Expected: labels are created fresh. Check Gmail label list post-execution.</span>
+    </label>
+  </div>
+</div>
+
+<!-- ─── SECTION 5 ─── -->
+<h2>5. Label renaming (custom names) <span class="badge badge--p0">P0</span></h2>
+
+<div class="section-group">
+  <div class="case">
+    <input type="checkbox" id="ln-01"><label for="ln-01"><strong>LN-01</strong> On the results screen, rename "Job Alerts" to "Jobs" before previewing
+      <span class="expected">Expected: Gmail label created is "Jobs", not "Job Alerts"</span>
+    </label>
+  </div>
+  <div class="case">
+    <input type="checkbox" id="ln-02"><label for="ln-02"><strong>LN-02</strong> Preview screen mentions the custom label name (not the default)
+      <span class="expected">Expected: preview summary shows "Jobs" not "Job Alerts"</span>
+    </label>
+  </div>
+  <div class="case">
+    <input type="checkbox" id="ln-03"><label for="ln-03"><strong>LN-03</strong> Clear the label name field completely, then preview
+      <span class="expected">Expected: validation or fallback to default name. App does not crash or create a nameless label.</span>
+    </label>
+  </div>
+</div>
+
+<!-- ─── SECTION 6 ─── -->
+<h2>6. Before/after results screen <span class="badge badge--p0">P0</span></h2>
+
+<div class="section-group">
+  <div class="case">
+    <input type="checkbox" id="ra-01"><label for="ra-01"><strong>RA-01</strong> After execution, the Done screen shows "Before" and "After" counts
+      <span class="expected">Expected: Before = total scanned. After = count of Human (kept) emails. Numbers make sense.</span>
+    </label>
+  </div>
+  <div class="case">
+    <input type="checkbox" id="ra-02"><label for="ra-02"><strong>RA-02</strong> Count animation runs on the Done screen
+      <span class="expected">Expected: "After" number counts down from Before value over ~1.5s with ease-out. Not a jump.</span>
+    </label>
+  </div>
+  <div class="case">
+    <input type="checkbox" id="ra-03"><label for="ra-03"><strong>RA-03</strong> Per-category breakdown shows all actioned categories
+      <span class="expected">Expected: one line per category with a count (e.g. "Archived 312 notifications", "Labelled 47 newsletters")</span>
+    </label>
+  </div>
+  <div class="case">
+    <input type="checkbox" id="ra-04"><label for="ra-04"><strong>RA-04</strong> Storage freed figure appears and is non-zero
+      <span class="expected">Expected: e.g. "approx. 45 MB freed" based on sizeEstimate sum of archived emails</span>
+    </label>
+  </div>
+  <div class="case">
+    <input type="checkbox" id="ra-05"><label for="ra-05"><strong>RA-05</strong> "Scan Again" button on Done screen returns to scanning state
+      <span class="expected">Expected: transitions to scan choice screen or scanning. Not a blank page.</span>
+    </label>
+  </div>
+  <div class="case">
+    <input type="checkbox" id="ra-06"><label for="ra-06"><strong>RA-06</strong> Done screen layout on mobile (375px width)
+      <span class="expected">Expected: Before/After panels stack vertically, readable, no overflow</span>
+      <span class="prereq">Test with DevTools device emulation</span>
+    </label>
+  </div>
+</div>
+
+<!-- ─── SECTION 7 ─── -->
+<h2>7. Undo functionality <span class="badge badge--p0">P0</span></h2>
+
+<div class="section-group">
+  <div class="case">
+    <input type="checkbox" id="un-01"><label for="un-01"><strong>UN-01</strong> After execution, press "Undo everything". Check Gmail.
+      <span class="expected">Expected: archived emails are back in inbox. Labels applied during session are removed.</span>
+    </label>
+  </div>
+  <div class="case">
+    <input type="checkbox" id="un-02"><label for="un-02"><strong>UN-02</strong> Undo with Kids &amp; Activities emails present (label_keep action)
+      <span class="expected">Expected: "Kids &amp; Activities" label removed from those emails. Emails remain in inbox (they were never archived).</span>
+    </label>
+  </div>
+  <div class="case">
+    <input type="checkbox" id="un-03"><label for="un-03"><strong>UN-03</strong> Done screen counts reset after undo
+      <span class="expected">Expected: Before/After counts update to reflect undo. Breakdown list clears or shows zeroes.</span>
+    </label>
+  </div>
+  <div class="case">
+    <input type="checkbox" id="un-04"><label for="un-04"><strong>UN-04</strong> Reload page, then attempt undo
+      <span class="expected">Expected: undo button is gone (page reload removes undo option). Hint text on done screen says this.</span>
+    </label>
+  </div>
+</div>
+
+<!-- ─── SECTION 8 ─── -->
+<h2>8. Preferences and migration <span class="badge badge--p1">P1</span></h2>
+
+<div class="section-group">
+  <div class="case">
+    <input type="checkbox" id="pr-01"><label for="pr-01"><strong>PR-01</strong> Simulate v1 saved preference: set localStorage key "inbox-sort-tidy-prefs" to <code>{"news@example.com":"fyi"}</code>. Load app and scan.
+      <span class="expected">Expected: news@example.com shows as Newsletters (migrated from fyi). No error.</span>
+      <span class="prereq">Use DevTools &gt; Application &gt; Local Storage to set the value before connecting</span>
+    </label>
+  </div>
+  <div class="case">
+    <input type="checkbox" id="pr-02"><label for="pr-02"><strong>PR-02</strong> Simulate v1 "archive" preference: <code>{"promos@example.com":"archive"}</code>. Load app and scan.
+      <span class="expected">Expected: promos@example.com shows as Retail Promos (migrated). No error.</span>
+    </label>
+  </div>
+  <div class="case">
+    <input type="checkbox" id="pr-03"><label for="pr-03"><strong>PR-03</strong> Set a v2 category preference (e.g. newsletters). Disconnect, reconnect, scan.
+      <span class="expected">Expected: saved preference applied on next scan without user needing to reselect</span>
+    </label>
+  </div>
+</div>
+
+<!-- ─── SECTION 9 ─── -->
+<h2>9. Accessibility <span class="badge badge--p1">P1</span></h2>
+
+<div class="section-group">
+  <div class="case">
+    <input type="checkbox" id="ac-01"><label for="ac-01"><strong>AC-01</strong> Category colour tags do not rely on colour alone
+      <span class="expected">Expected: each tag also has a text label (e.g. "Job Alerts", "Social") not just a colour dot</span>
+    </label>
+  </div>
+  <div class="case">
+    <input type="checkbox" id="ac-02"><label for="ac-02"><strong>AC-02</strong> Tab through the sender table with keyboard only
+      <span class="expected">Expected: focus reaches every dropdown in order. No focus traps.</span>
+    </label>
+  </div>
+  <div class="case">
+    <input type="checkbox" id="ac-03"><label for="ac-03"><strong>AC-03</strong> Scan progress is announced to screen readers
+      <span class="expected">Expected: scan status element has aria-live="polite". Percentage updates are readable.</span>
+    </label>
+  </div>
+</div>
+
+<!-- ─── SECTION 10 ─── -->
+<h2>10. Security spot checks <span class="badge badge--p0">P0</span></h2>
+
+<div class="section-group">
+  <div class="case">
+    <input type="checkbox" id="sec-01"><label for="sec-01"><strong>SEC-01</strong> After scan, open DevTools &gt; Application &gt; Local Storage
+      <span class="expected">Expected: only "inbox-sort-tidy-prefs" key present. No tokens, no email content, no subjects.</span>
+    </label>
+  </div>
+  <div class="case">
+    <input type="checkbox" id="sec-02"><label for="sec-02"><strong>SEC-02</strong> After scan, open DevTools &gt; Application &gt; Session Storage and Cookies
+      <span class="expected">Expected: no auth tokens in either. Token is held in JS memory only.</span>
+    </label>
+  </div>
+  <div class="case">
+    <input type="checkbox" id="sec-03"><label for="sec-03"><strong>SEC-03</strong> DevTools Network tab during scan: check all requests go only to googleapis.com and accounts.google.com
+      <span class="expected">Expected: zero requests to any other domain</span>
+    </label>
+  </div>
+  <div class="case">
+    <input type="checkbox" id="sec-04"><label for="sec-04"><strong>SEC-04</strong> Open DevTools Console during full flow
+      <span class="expected">Expected: zero errors. No warnings about CSP violations.</span>
+    </label>
+  </div>
+</div>
+
+<!-- ─── SECTION 11 ─── -->
+<h2>11. Copy and content <span class="badge badge--p1">P1</span></h2>
+
+<div class="section-group">
+  <div class="case">
+    <input type="checkbox" id="cp-01"><label for="cp-01"><strong>CP-01</strong> Check index.html, privacy-policy.html, terms.html for any remaining emdashes or "--"
+      <span class="expected">Expected: zero instances. All replaced with periods or restructured sentences.</span>
+    </label>
+  </div>
+  <div class="case">
+    <input type="checkbox" id="cp-02"><label for="cp-02"><strong>CP-02</strong> Privacy Policy has "Back to app" link at the bottom
+      <span class="expected">Expected: link renders and navigates to index.html</span>
+    </label>
+  </div>
+  <div class="case">
+    <input type="checkbox" id="cp-03"><label for="cp-03"><strong>CP-03</strong> Terms of Service has "Back to app" link at the bottom
+      <span class="expected">Expected: link renders and navigates to index.html</span>
+    </label>
+  </div>
+</div>
+
+<!-- ─── SECTION 12 ─── -->
+<h2>12. Edge cases <span class="badge badge--p1">P1</span></h2>
+
+<div class="section-group">
+  <div class="case">
+    <input type="checkbox" id="ec-01"><label for="ec-01"><strong>EC-01</strong> Run the tool with a Gmail account that has fewer than 20 emails in inbox
+      <span class="expected">Expected: scans correctly, results screen shows, no JS errors for small counts</span>
+    </label>
+  </div>
+  <div class="case">
+    <input type="checkbox" id="ec-02"><label for="ec-02"><strong>EC-02</strong> Run the tool, then disconnect, then reconnect and scan again in the same browser session
+      <span class="expected">Expected: second scan works. Old state is cleared. No stale data from first scan.</span>
+    </label>
+  </div>
+  <div class="case">
+    <input type="checkbox" id="ec-03"><label for="ec-03"><strong>EC-03</strong> Click "Preview Changes" with all senders set to "Keep in Inbox"
+      <span class="expected">Expected: preview shows zero actions. "Tidy My Inbox" button either disabled or shows a "nothing to do" message.</span>
+    </label>
+  </div>
+  <div class="case">
+    <input type="checkbox" id="ec-04"><label for="ec-04"><strong>EC-04</strong> Run automated P0 unit tests at test/run-p0.html
+      <span class="expected">Expected: all tests pass. Green summary. Zero failures.</span>
+      <span class="prereq">Must be served via a local server (file:// will fail for ES modules)</span>
+    </label>
+  </div>
+</div>
+
+<!-- ─── SIGN-OFF ─── -->
+<h2>Sign-off</h2>
+<div style="padding: 1rem; background: #f9fafb; border-radius: 6px; font-size: 0.875rem;">
+  <p style="margin: 0 0 1rem">All P0 cases must pass before release. P1 cases must pass or have documented deferrals.</p>
+  <table style="border-collapse: collapse; width: 100%;">
+    <tr>
+      <td style="padding: 0.4rem 1rem 0.4rem 0; width: 40%">Tester name: <span style="border-bottom: 1px solid #ccc; display: inline-block; width: 180px;">&nbsp;</span></td>
+      <td style="padding: 0.4rem 0;">Date: <span style="border-bottom: 1px solid #ccc; display: inline-block; width: 140px;">&nbsp;</span></td>
+    </tr>
+    <tr>
+      <td style="padding: 0.4rem 1rem 0.4rem 0;">Outcome: <span style="border-bottom: 1px solid #ccc; display: inline-block; width: 180px;">&nbsp;</span></td>
+      <td></td>
+    </tr>
+  </table>
+</div>
+
+<script>
+  const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+  const fill = document.getElementById('progress-fill');
+  const label = document.getElementById('progress-text');
+  const total = checkboxes.length;
+
+  // Restore from localStorage
+  checkboxes.forEach(cb => {
+    const saved = localStorage.getItem('uat-v2-' + cb.id);
+    if (saved === '1') cb.checked = true;
+  });
+
+  function update() {
+    const checked = [...checkboxes].filter(c => c.checked).length;
+    fill.style.width = (checked / total * 100) + '%';
+    label.textContent = checked + ' of ' + total + ' cases checked';
+    checkboxes.forEach(cb => {
+      localStorage.setItem('uat-v2-' + cb.id, cb.checked ? '1' : '0');
+    });
+  }
+
+  checkboxes.forEach(cb => cb.addEventListener('change', update));
+  update();
+</script>
+
+</body>
+</html>

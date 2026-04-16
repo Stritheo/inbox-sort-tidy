@@ -214,6 +214,25 @@ export async function batchArchive(messageIds) {
 }
 
 /**
+ * Add a label without removing from INBOX (label and keep visible).
+ * @param {string[]} messageIds
+ * @param {string} labelId -- Gmail label ID
+ */
+export async function batchLabelKeep(messageIds, labelId) {
+  const CHUNK = 1000;
+  for (let i = 0; i < messageIds.length; i += CHUNK) {
+    const chunk = messageIds.slice(i, i + CHUNK);
+    await gmailFetch('/messages/batchModify', {
+      method: 'POST',
+      body: JSON.stringify({
+        ids: chunk,
+        addLabelIds: [labelId],
+      }),
+    });
+  }
+}
+
+/**
  * Add a label and remove from INBOX.
  * @param {string[]} messageIds
  * @param {string} labelId -- Gmail label ID
@@ -240,15 +259,19 @@ export async function batchAddLabel(messageIds, labelId) {
  */
 export async function ensureLabels(labelNames) {
   const data = await gmailFetch('/labels');
+
+  // Build case-insensitive lookup: lowercased name -> { name, id }
   const existing = new Map();
   for (const label of data.labels) {
-    existing.set(label.name, label.id);
+    existing.set(label.name.toLowerCase(), { name: label.name, id: label.id });
   }
 
   const result = {};
   for (const name of labelNames) {
-    if (existing.has(name)) {
-      result[name] = existing.get(name);
+    const match = existing.get(name.toLowerCase());
+    if (match) {
+      // Reuse existing label (even if casing differs)
+      result[name] = match.id;
     } else {
       const created = await gmailFetch('/labels', {
         method: 'POST',
