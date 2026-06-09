@@ -40,6 +40,22 @@ Read the full [privacy policy](privacy-policy.html).
 - Pico CSS for styling (self-hosted)
 - Hosted on Cloudflare Pages (free tier)
 
+## Self-hosting or forking
+
+The OAuth Client ID in `js/app.js` is scoped to this project's hosted domain. If you deploy a fork to your own domain, Google will reject the auth request because the origin will not match. You need your own Client ID.
+
+## Steps to get one (free, ~10 minutes):
+
+1. Create a project in [Google Cloud Console](https://console.cloud.google.com).
+2. Enable the Gmail API under **APIs & Services -> Library**.
+3. Go to **APIs & Services -> Credentials -> Create credentials -> OAuth 2.0 Client ID**.
+   - Application type: **Web application**
+   - Authorised JavaScript origins: your deployed domain (e.g. `https://yourusername.github.io`)
+4. Copy the generated Client ID and replace the `CLIENT_ID` value in `js/app.js`.
+5. Configure your OAuth consent screen (**Google Auth Platform -> Branding + Audience**). For personal or small-group use, "Testing" mode (up to 100 users) is sufficient without a Google review.
+
+The full GCP setup walkthrough is in [`docs/setup-guide.md`](docs/setup-guide.md).
+
 ## Scope
 
 The app requests `gmail.modify` permission, which is the minimum scope required to archive emails (remove the INBOX label). This is a restricted scope verified by Google. The app cannot delete emails, send emails, or access any data outside Gmail.
