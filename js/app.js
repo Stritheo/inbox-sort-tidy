@@ -16,7 +16,7 @@ import { executeActions, undoActions, canUndo, clearUndoManifest } from './actio
 
 // ── Configuration ──────────────────────────────────────────────
 
-const CLIENT_ID = '607048348334-46cg0kuq362s3opbe1sq47pssfiqccqq.apps.googleusercontent.com';
+const CLIENT_ID = '607048348334-46cg0kuq362s3opbe1sq47pssfiqccqq.apps.googleusercontent.com'; // Author's client, locked to stritheo.github.io. Forking? Set your own -- see README 'Setup'.
 
 // ── DOM references ─────────────────────────────────────────────
 
